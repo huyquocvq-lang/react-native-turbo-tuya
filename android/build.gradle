@@ -1,0 +1,64 @@
+buildscript {
+  ext.TuyaReactNative = [
+    kotlinVersion: "2.0.21",
+    minSdkVersion: 24,
+    compileSdkVersion: 36
+  ]
+
+  ext.getExtOrDefault = { prop ->
+    if (rootProject.ext.has(prop)) {
+      return rootProject.ext.get(prop)
+    }
+
+    return TuyaReactNative[prop]
+  }
+
+  repositories {
+    google()
+    mavenCentral()
+  }
+
+  dependencies {
+    classpath "com.android.tools.build:gradle:8.7.2"
+    // noinspection DifferentKotlinGradleVersion
+    classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${getExtOrDefault('kotlinVersion')}"
+  }
+}
+
+
+apply plugin: "com.android.library"
+apply plugin: "kotlin-android"
+
+apply plugin: "com.facebook.react"
+
+android {
+  namespace "com.coolbath.tuyareactnative"
+
+  compileSdkVersion getExtOrDefault("compileSdkVersion")
+
+  defaultConfig {
+    minSdkVersion getExtOrDefault("minSdkVersion")
+    consumerProguardFiles "proguard-rules.pro"
+  }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+}
+
+repositories {
+  google()
+  mavenCentral()
+  // Repo Maven của Tuya (bắt buộc để resolve thingsmart)
+  maven { url "https://maven-other.tuya.com/repository/maven-releases/" }
+  maven { url "https://maven-other.tuya.com/repository/maven-commercial-releases/" }
+}
+
+dependencies {
+  implementation "com.facebook.react:react-android"
+  // Tuya Smart Life App SDK (Wi-Fi + BLE). `api` để app tiêu thụ thấy được.
+  api "com.thingclips.smart:thingsmart:7.5.6"
+  // LƯU Ý: file bảo mật `security-algorithm.aar` KHÔNG ở đây — app tiêu thụ
+  // (example / apps/mobile) phải đặt vào `app/libs/` (xem SETUP.md).
+}
