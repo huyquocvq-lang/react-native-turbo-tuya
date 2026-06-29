@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Text, View, StyleSheet, Button } from 'react-native';
-import { Tuya } from '@cool-bath/tuya-react-native';
+import { Tuya } from '@jimmy-vu/react-native-turbo-tuya';
 
 // LƯU Ý: example này cần native build (B3–B5) thì initSdk mới chạy.
 // Trước đó nút sẽ báo lỗi "module not implemented" — đúng như mong đợi.

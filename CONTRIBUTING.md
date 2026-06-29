@@ -25,9 +25,9 @@ The [example app](/example/) demonstrates usage of the library. You need to run 
 
 It is configured to use the local version of the library, so any changes you make to the library's source code will be reflected in the example app. Changes to the library's JavaScript code will be reflected in the example app without a rebuild, but native code changes will require a rebuild of the example app.
 
-If you want to use Android Studio or Xcode to edit the native code, you can open the `example/android` or `example/ios` directories respectively in those editors. To edit the Objective-C or Swift files, open `example/ios/TuyaReactNativeExample.xcworkspace` in Xcode and find the source files at `Pods > Development Pods > @cool-bath/tuya-react-native`.
+If you want to use Android Studio or Xcode to edit the native code, you can open the `example/android` or `example/ios` directories respectively in those editors. To edit the Objective-C or Swift files, open `example/ios/TuyaReactNativeExample.xcworkspace` in Xcode and find the source files at `Pods > Development Pods > @jimmy-vu/react-native-turbo-tuya`.
 
-To edit the Java or Kotlin files, open `example/android` in Android studio and find the source files at `cool-bath-tuya-react-native` under `Android`.
+To edit the Java or Kotlin files, open `example/android` in Android studio and find the source files at `react-native-turbo-tuya` under `Android`.
 
 You can use various commands from the root directory to work with the project.
 

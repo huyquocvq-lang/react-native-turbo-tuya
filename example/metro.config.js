@@ -13,7 +13,7 @@ const root = path.resolve(__dirname, '..');
 const config = withMetroConfig(getDefaultConfig(__dirname), {
   root,
   dirname: __dirname,
-  conditions: ['cool-bath-tuya-react-native-source'],
+  conditions: ['react-native-turbo-tuya-source'],
 });
 
 module.exports = config;

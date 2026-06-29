@@ -9,7 +9,7 @@ export default defineConfig((env) =>
       alias: {
         [pack.name]: new URL('..', import.meta.url),
       },
-      conditions: ['cool-bath-tuya-react-native-source'],
+      conditions: ['react-native-turbo-tuya-source'],
       dedupe: Object.keys(pack.peerDependencies),
     },
   })

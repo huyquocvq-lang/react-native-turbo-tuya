@@ -19,3 +19,14 @@ buildscript {
 }
 
 apply plugin: "com.facebook.react.rootproject"
+
+// Repo Maven Tuya — bắt buộc ở phạm vi resolve của :app: transitive dep
+// `com.thingclips.smart:thingsmart` (do lib `api`) KHÔNG kế thừa repositories của lib module;
+// :app phải tự khai. settings.gradle không có dependencyResolutionManagement → PREFER_PROJECT,
+// nên allprojects.repositories được dùng (không xung đột FAIL_ON_PROJECT_REPOS).
+allprojects {
+    repositories {
+        maven { url "https://maven-other.tuya.com/repository/maven-releases/" }
+        maven { url "https://maven-other.tuya.com/repository/maven-commercial-releases/" }
+    }
+}

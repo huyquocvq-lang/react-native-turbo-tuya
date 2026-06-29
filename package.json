@@ -1,12 +1,12 @@
 {
-  "name": "@cool-bath/tuya-react-native",
+  "name": "@jimmy-vu/react-native-turbo-tuya",
   "version": "0.1.0",
   "description": "React Native TurboModule wrapping Tuya Smart Life App SDK (Wi-Fi + BLE) for the ice-bath app",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
   "exports": {
     ".": {
-      "cool-bath-tuya-react-native-source": "./src/index.tsx",
+      "react-native-turbo-tuya-source": "./src/index.tsx",
       "types": "./lib/typescript/src/index.d.ts",
       "default": "./lib/module/index.js"
     },
@@ -32,7 +32,7 @@
     "!**/.*"
   ],
   "scripts": {
-    "example": "yarn workspace @cool-bath/tuya-react-native-example",
+    "example": "yarn workspace @jimmy-vu/react-native-turbo-tuya-example",
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
     "prepare": "bob build",
     "typecheck": "tsc",
@@ -115,11 +115,11 @@
     ]
   },
   "codegenConfig": {
-    "name": "TuyaReactNativeSpec",
+    "name": "TurboTuyaSpec",
     "type": "modules",
     "jsSrcsDir": "src",
     "android": {
-      "javaPackageName": "com.coolbath.tuyareactnative"
+      "javaPackageName": "com.jimmyvu.turbotuya"
     }
   },
   "prettier": {
@@ -135,7 +135,7 @@
       "customExportConditions": [
         "require",
         "react-native",
-        "<%- project.sourceCondition -%>"
+        "react-native-turbo-tuya-source"
       ]
     },
     "modulePathIgnorePatterns": [

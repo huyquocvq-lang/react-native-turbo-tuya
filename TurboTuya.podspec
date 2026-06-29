@@ -3,7 +3,7 @@ require "json"
 package = JSON.parse(File.read(File.join(__dir__, "package.json")))
 
 Pod::Spec.new do |s|
-  s.name         = "TuyaReactNative"
+  s.name         = "TurboTuya"
   s.version      = package["version"]
   s.summary      = package["description"]
   s.homepage     = package["homepage"]
@@ -18,7 +18,7 @@ Pod::Spec.new do |s|
 
   # Tuya Smart Life App SDK (Home SDK). LƯU Ý: file bảo mật `ThingSmartCryption`
   # (giải nén từ ios_core_sdk.tar.gz) là per-app → khai báo ở Podfile của app
-  # tiêu thụ (example / apps/mobile), KHÔNG ở đây. Xem SETUP.md.
+  # tiêu thụ (example / apps/mobile), KHÔNG ở đây. Xem README.md.
   s.dependency "ThingSmartHomeKit"
   s.dependency "ThingSmartBusinessExtensionKit"
 

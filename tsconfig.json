@@ -2,12 +2,12 @@
   "compilerOptions": {
     "rootDir": ".",
     "paths": {
-      "@cool-bath/tuya-react-native": ["./src/index"]
+      "@jimmy-vu/react-native-turbo-tuya": ["./src/index"]
     },
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
     "customConditions": [
-      "cool-bath-tuya-react-native-source",
+      "react-native-turbo-tuya-source",
       "react-native-strict-api"
     ],
     "esModuleInterop": true,

@@ -85,7 +85,7 @@ android/generated
 # React Native Nitro Modules
 nitrogen/
 
-# Tuya — file bảo mật + secret (KHÔNG commit). Xem SETUP.md + gradle.properties.example
+# Tuya — file bảo mật + secret (KHÔNG commit). Xem README.md + gradle.properties.example
 **/security-algorithm.aar
 **/ios_core_sdk.tar.gz
 **/ThingSmartCryption*

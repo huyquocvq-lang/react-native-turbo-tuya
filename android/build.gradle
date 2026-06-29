@@ -1,5 +1,5 @@
 buildscript {
-  ext.TuyaReactNative = [
+  ext.TurboTuya = [
     kotlinVersion: "2.0.21",
     minSdkVersion: 24,
     compileSdkVersion: 36
@@ -10,7 +10,7 @@ buildscript {
       return rootProject.ext.get(prop)
     }
 
-    return TuyaReactNative[prop]
+    return TurboTuya[prop]
   }
 
   repositories {
@@ -32,7 +32,7 @@ apply plugin: "kotlin-android"
 apply plugin: "com.facebook.react"
 
 android {
-  namespace "com.coolbath.tuyareactnative"
+  namespace "com.jimmyvu.turbotuya"
 
   compileSdkVersion getExtOrDefault("compileSdkVersion")
 
@@ -60,5 +60,5 @@ dependencies {
   // Tuya Smart Life App SDK (Wi-Fi + BLE). `api` để app tiêu thụ thấy được.
   api "com.thingclips.smart:thingsmart:7.5.6"
   // LƯU Ý: file bảo mật `security-algorithm.aar` KHÔNG ở đây — app tiêu thụ
-  // (example / apps/mobile) phải đặt vào `app/libs/` (xem SETUP.md).
+  // (example / apps/mobile) phải đặt vào `app/libs/` (xem README.md).
 }
