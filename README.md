@@ -2,17 +2,26 @@
 
 React Native **Turbo Native Module** wrapping the Tuya Smart Life App SDK (Wi-Fi + BLE) for the ice-bath app.
 
-Split by feature into 5 independent TurboModules:
+Split by feature into **12 independent TurboModules** (one Codegen spec each). Legend: ✅ wired · ◑ partial / skeleton · ❌ typed TODO.
 
 | Module | API group | Android | iOS |
 |---|---|---|---|
-| `TuyaCore` | init / version / destroy | ✅ | ✅ init wired |
-| `TuyaAuth` | email + 3rd-party login + session | ✅ | ⚠️ only `isLoggedIn` |
-| `TuyaHome` | create / list / detail home | ✅ | ❌ TODO |
-| `TuyaPairing` | Wi-Fi EZ/AP + BLE + token (+ events) | ✅ | ❌ TODO |
-| `TuyaDevice` | DP control + real-time status (events) | ✅ | ❌ TODO |
+| `TuyaCore` | init / version / destroy | ✅ | ✅ |
+| `TuyaAuth` | email + 3rd-party login, profile, session *(events)* | ✅ | ◑ profile/session; email-login TODO |
+| `TuyaHome` | home CRUD + weather + change/status listeners *(events)* | ✅ | ❌ |
+| `TuyaDevice` | DP control + status + device management *(events)* | ✅ | ❌ |
+| `TuyaPairing` | Wi-Fi EZ/AP, BLE, combo BLE+Wi-Fi, auto-token; advanced sub-device/gateway/QR/wired *(events)* | ✅ core · ◑ advanced | ❌ |
+| `TuyaOta` | firmware check / upgrade + auto-switch *(events)* | ✅ | ❌ |
+| `TuyaScene` | scenes + automations (conditions/actions) *(events)* | ◑ skeleton | ❌ |
+| `TuyaTimer` | cloud schedules (add/update/remove/status) | ✅ · ◑ list | ❌ |
+| `TuyaMessage` | push status + message center + DND | ✅ · ◑ list/by-type | ❌ |
+| `TuyaMember` | home members + invitation + transfer owner | ◑ | ❌ |
+| `TuyaMatter` | Matter device pairing *(events)* | ◑ skeleton | ❌ |
+| `TuyaMesh` | BLE SIG / Tuya mesh *(events)* | ◑ skeleton | ❌ |
 
-> **Status:** Android implements all 7 API groups (code-complete, not yet device-tested — needs JDK 17 + Android SDK to build). iOS has `TuyaCore.initSdk` + `TuyaAuth.isLoggedIn` wired; the rest is a typed skeleton (TODO) to finish in Xcode.
+> **Status:** Nothing device-tested yet (building needs JDK 17 + Android SDK for Android, macOS + Xcode for iOS).
+> **Android** wires the common flows (Core, Auth, Home incl. weather/listeners, Device, OTA, Pairing core + combo/auto-token, and most of Scene-adjacent Timer/Message/Member). Items marked ◑ *skeleton* (Scene, Matter, Mesh, advanced pairing) and a few bean/enum-dependent methods are **typed stubs that reject with `not_implemented` and carry the exact intended SDK call in a comment** — their underlying Tuya APIs weren't captured verbatim, so they're wired on a real-SDK machine.
+> **iOS** has `TuyaCore.initSdk` + `TuyaAuth` profile/session wired; the rest is a typed skeleton (TODO) to finish in Xcode. The event infrastructure (`RCTEventEmitter`) is in place for every event-emitting module.
 
 ## Installation
 
@@ -110,15 +119,40 @@ sub.remove();
 
 Prefer per-feature imports? `import { TuyaAuth, TuyaDevice } from '@jimmy-vu/react-native-turbo-tuya'`.
 
+## Example app
+
+A full demo lives in [`example/src/App.tsx`](example/src/App.tsx) (+ reusable UI in [`example/src/ui.tsx`](example/src/ui.tsx)): one section per module, a live event log, and `TuyaErrors`-based error classification. It walks the ice-bath happy path — **Init → Login → Create/List home → Get token → Pair (Wi-Fi/BLE) → Set target temperature** — and lets you poke every other API. Run it after a native build:
+
+```sh
+yarn        # install workspace
+yarn example android   # or: yarn example ios
+```
+
+Methods marked ◑/skeleton reject with `not_implemented`; the demo surfaces that in its console (expected until they're wired on a real-SDK machine).
+
+## Events
+
+Event-emitting modules expose `onXxx(listener) → { remove() }` helpers (built on `NativeEventEmitter`), plus the `TuyaEvents` name constants:
+
+```ts
+import { onDeviceStatus, onPairingProgress, onBleScan, onSessionExpired,
+         onOtaProgress, onOtaStatusChanged, onOtaSuccess, onOtaFailure,
+         onSceneChange, onHomeChange,
+         onMatterDeviceFound, onMatterAttestation, onMatterError,
+         onMeshDeviceFound, onMeshDpUpdate, onMeshStatusChanged } from '@jimmy-vu/react-native-turbo-tuya';
+```
+
 ## Architecture
 
-One npm package, 5 TurboModules (Codegen library `TurboTuyaSpec`):
+One npm package, 12 TurboModules (Codegen library `TurboTuyaSpec`):
 
-- **TS** — specs in `src/specs/NativeTuya{Core,Auth,Home,Pairing,Device}.ts`; flat facade `Tuya` + per-module exports + event helpers in `src/index.tsx`.
-- **Android** — `com.jimmyvu.turbotuya.{core,auth,home,pairing,device}`; `TurboTuyaPackage` registers all 5.
-- **iOS** — `ios/{Core,Auth,Home,Pairing,Device}/`, each with `RCT_EXPORT_MODULE()`.
+- **TS** — one spec per module in `src/specs/NativeTuya*.ts` (Core, Auth, Home, Pairing, Device, Ota, Scene, Timer, Message, Member, Matter, Mesh); flat facade `Tuya` + per-module exports + event helpers in `src/index.tsx`; pure-JS error classifier `TuyaErrors` in `src/errors.ts`.
+- **Android** — `com.jimmyvu.turbotuya.<feature>`; `TurboTuyaPackage` registers all 12. Event modules emit via `RCTDeviceEventEmitter`.
+- **iOS** — `ios/<Feature>/`, each with `RCT_EXPORT_MODULE()`; event modules subclass `TuyaEventEmitter` (`RCTEventEmitter`).
 
-Notes: the account linking the SDK must be the **Owner** of the Home (`role == 2`). A pairing token lives ~10 minutes and dies after one device pairs — fetch it right before each pairing. Only 2.4 GHz Wi-Fi is supported.
+Codegen constraints honoured throughout: no union types in specs (use `string`), object params passed as JSON strings, and ObjC/C++ keyword param names avoided (`operator`→`op`, `id`→`dndId`).
+
+Notes: the account linking the SDK must be the **Owner** of the Home (`role == 2`). A pairing token lives ~10 minutes and dies after one device pairs — fetch it right before each pairing (or use `startWifiPairingAuto` / `startBleWifiPairing` which fetch it for you). Only 2.4 GHz Wi-Fi is supported.
 
 ## Contributing
 

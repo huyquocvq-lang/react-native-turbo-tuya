@@ -19,7 +19,6 @@
     "ios",
     "cpp",
     "*.podspec",
-    "react-native.config.js",
     "!ios/build",
     "!android/build",
     "!android/gradle",
@@ -117,7 +116,7 @@
   "codegenConfig": {
     "name": "TurboTuyaSpec",
     "type": "modules",
-    "jsSrcsDir": "src",
+    "jsSrcsDir": "src/specs",
     "android": {
       "javaPackageName": "com.jimmyvu.turbotuya"
     }

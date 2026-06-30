@@ -6,6 +6,7 @@ import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.WritableMap
 import com.facebook.react.modules.core.DeviceEventManagerModule
+import com.thingclips.smart.android.ble.api.BleScanResponse
 import com.thingclips.smart.android.ble.api.LeScanSetting
 import com.thingclips.smart.android.ble.api.ScanDeviceBean
 import com.thingclips.smart.android.ble.api.ScanType
@@ -14,9 +15,12 @@ import com.thingclips.smart.sdk.api.IBleActivatorListener
 import com.thingclips.smart.sdk.api.IThingActivator
 import com.thingclips.smart.sdk.api.IThingActivatorGetToken
 import com.thingclips.smart.sdk.api.IThingSmartActivatorListener
+import com.thingclips.smart.sdk.api.IMultiModeActivatorListener
 import com.thingclips.smart.sdk.bean.ActivatorBuilder
 import com.thingclips.smart.sdk.bean.BleActivatorBean
 import com.thingclips.smart.sdk.bean.DeviceBean
+import com.thingclips.smart.sdk.bean.MultiModeActivatorBean
+import com.thingclips.smart.sdk.bean.PauseStateData
 import com.thingclips.smart.sdk.enums.ActivatorModelEnum
 
 // TuyaPairing — ghép nối Wi-Fi (EZ/AP) + BLE. Phát event onPairingProgress / onBleScan.
@@ -53,6 +57,35 @@ class TuyaPairingModule(reactContext: ReactApplicationContext) :
 
   // ---------- Wi-Fi pairing (EZ/AP) ----------
   override fun startWifiPairing(
+    mode: String,
+    ssid: String,
+    password: String,
+    token: String,
+    timeoutSec: Double,
+    promise: Promise,
+  ) = doWifiPairing(mode, ssid, password, token, timeoutSec, promise)
+
+  // Auto-token: tự getActivatorToken(homeId) rồi chạy EZ/AP — khỏi quản lý token thủ công.
+  override fun startWifiPairingAuto(
+    homeId: Double,
+    mode: String,
+    ssid: String,
+    password: String,
+    timeoutSec: Double,
+    promise: Promise,
+  ) {
+    ThingHomeSdk.getActivatorInstance().getActivatorToken(
+      homeId.toLong(),
+      object : IThingActivatorGetToken {
+        override fun onSuccess(token: String?) =
+          doWifiPairing(mode, ssid, password, token ?: "", timeoutSec, promise)
+        override fun onFailure(code: String?, error: String?) =
+          promise.reject(code ?: "token_error", error)
+      },
+    )
+  }
+
+  private fun doWifiPairing(
     mode: String,
     ssid: String,
     password: String,
@@ -97,19 +130,22 @@ class TuyaPairingModule(reactContext: ReactApplicationContext) :
       .setTimeout(timeoutSec.toLong() * 1000)
       .addScanType(ScanType.SINGLE)
       .build()
-    ThingHomeSdk.getBleOperator().startLeScan(setting) { bean ->
-      // Giữ lại bean gốc để startBlePairing dựng BleActivatorBean(scanBean).
-      bean?.uuid?.let { scannedBle[it] = bean }
-      val m = Arguments.createMap()
-      m.putString("id", bean?.id ?: "")
-      m.putString("name", bean?.name ?: "")
-      m.putString("productId", bean?.productId ?: "")
-      m.putString("uuid", bean?.uuid ?: "")
-      m.putString("mac", bean?.mac ?: "")
-      m.putString("address", bean?.address ?: "")
-      m.putDouble("deviceType", (bean?.deviceType ?: 0).toDouble())
-      emit(EVT_BLE, m)
-    }
+    // object : BleScanResponse (verbatim note) thay trailing-lambda — tránh phụ thuộc SAM-conversion.
+    ThingHomeSdk.getBleOperator().startLeScan(setting, object : BleScanResponse {
+      override fun onResult(bean: ScanDeviceBean?) {
+        // Giữ lại bean gốc để startBlePairing dựng BleActivatorBean(scanBean).
+        bean?.uuid?.let { scannedBle[it] = bean }
+        val m = Arguments.createMap()
+        m.putString("id", bean?.id ?: "")
+        m.putString("name", bean?.name ?: "")
+        m.putString("productId", bean?.productId ?: "")
+        m.putString("uuid", bean?.uuid ?: "")
+        m.putString("mac", bean?.mac ?: "")
+        m.putString("address", bean?.address ?: "")
+        m.putDouble("deviceType", (bean?.deviceType ?: 0).toDouble())
+        emit(EVT_BLE, m)
+      }
+    })
   }
 
   override fun stopBleScan() {
@@ -147,9 +183,137 @@ class TuyaPairingModule(reactContext: ReactApplicationContext) :
     )
   }
 
+  // ---------- Combo / dual-mode (BLE + Wi-Fi) ----------
+  // Auto-token: tự getActivatorToken(homeId) rồi startActivator(MultiModeActivatorBean) dựng từ scan bean đã cache.
+  override fun startBleWifiPairing(
+    homeId: Double,
+    uuid: String,
+    ssid: String,
+    password: String,
+    timeoutSec: Double,
+    promise: Promise,
+  ) {
+    val scan = scannedBle[uuid]
+    if (scan == null) {
+      promise.reject(
+        "ble_scan_required",
+        "Chưa có kết quả scan cho uuid=$uuid — gọi startBleScan() trước startBleWifiPairing().",
+      )
+      return
+    }
+    ThingHomeSdk.getActivatorInstance().getActivatorToken(
+      homeId.toLong(),
+      object : IThingActivatorGetToken {
+        override fun onSuccess(token: String?) {
+          // MultiModeActivatorBean copy uuid/deviceType từ scan bean; set thêm ssid/pwd/token/homeId (verbatim note §3).
+          val bean = MultiModeActivatorBean(scan).apply {
+            this.uuid = uuid
+            this.deviceType = scan.deviceType
+            this.ssid = ssid
+            this.pwd = password
+            this.token = token ?: ""
+            this.homeId = homeId.toLong()
+            this.timeout = timeoutSec.toLong() * 1000
+          }
+          ThingHomeSdk.getActivator().newMultiModeActivator().startActivator(
+            bean,
+            object : IMultiModeActivatorListener {
+              override fun onSuccess(deviceBean: DeviceBean?) = promise.resolve(deviceToMap(deviceBean))
+              override fun onFailure(code: Int, msg: String?, handle: Any?) =
+                promise.reject(code.toString(), msg)
+              override fun onActivatorStatePauseCallback(stateData: PauseStateData?) {
+                // Stage trung gian: 0 activation,1 delegation,2 network,3 cloud activation (PauseStateData getters cần verify).
+                val m = Arguments.createMap()
+                m.putString("step", "combo_stage")
+                m.putString("dataJson", stateData?.toString() ?: "")
+                emit(EVT_PAIRING, m)
+              }
+            },
+          )
+        }
+        override fun onFailure(code: String?, error: String?) =
+          promise.reject(code ?: "token_error", error)
+      },
+    )
+  }
+
+  override fun stopBleWifiPairing(uuid: String) {
+    // Verbatim note §3: stopActivator(uuid) gọi trên newMultiModeActivator().
+    ThingHomeSdk.getActivator().newMultiModeActivator().stopActivator(uuid)
+  }
+
+  // ---------- P3: pairing nâng cao (unified ActivatorService — package CHƯA verbatim) ----------
+  // SKELETON có chủ đích (như B7 Scene): API hợp nhất ActivatorService/ActivatorMode/Zigbee|QRScanActivator(+Params)/
+  // IActivatorListener/IDevice CHƯA lấy verbatim package + note cảnh báo KHÔNG trộn 2 thế hệ → wire trên SDK thật.
+  private fun todoPairing(promise: Promise, what: String, intended: String) {
+    promise.reject("not_implemented", "$what chưa wire (unified ActivatorService chưa verbatim). Intended: $intended")
+  }
+
+  override fun startSubDevicePairing(gatewayDevId: String, timeoutSec: Double) {
+    // intended: ZigbeeActivator=ActivatorService.activator(ActivatorMode.Zigbee);
+    //   setParams(ZigbeeActivatorParams.Builder().setGwDeviceId(gatewayDevId).setTimeout(ms).build());
+    //   setListener(IActivatorListener{onSuccess(IDevice)→emit onPairingProgress step='subdevice_found' devId; onError}); start().
+    val m = Arguments.createMap()
+    m.putString("step", "subdevice_error")
+    m.putString("dataJson", "not_implemented (unified ActivatorService chưa wire)")
+    emit(EVT_PAIRING, m)
+  }
+
+  override fun stopSubDevicePairing(gatewayDevId: String) {
+    // intended: zigbeeActivator.stop() (giữ tham chiếu khi wire thật).
+  }
+
+  override fun startGatewayPairing(
+    gatewayDevId: String,
+    productId: String,
+    token: String,
+    timeoutSec: Double,
+    promise: Promise,
+  ) = todoPairing(
+    promise, "startGatewayPairing",
+    "Android activator gateway/token; iOS activeGatewayDeviceWithGwId:productId:token:timeout:",
+  )
+
+  override fun startQrPairing(
+    homeId: Double,
+    assetId: String,
+    code: String,
+    timeoutSec: Double,
+    promise: Promise,
+  ) = todoPairing(
+    promise, "startQrPairing",
+    "QRScanActivator=ActivatorService.activator(ActivatorMode.QRScan)+QRScanActivatorParams.Builder().setAssetId().setCode().build()",
+  )
+
+  override fun startWiredPairing(
+    homeId: Double,
+    token: String,
+    timeoutSec: Double,
+    promise: Promise,
+  ) = todoPairing(
+    promise, "startWiredPairing",
+    "Android search+token (ActivatorMode.Auto?); iOS startConfigWiFiWithToken:timeout:",
+  )
+
+  override fun destroyActivator() {
+    // intended: activator nâng cao .destroy()/.onDestroy() (giữ tham chiếu khi wire thật). Hiện dọn wifi+scan.
+    runCatching { wifiActivator?.stop(); wifiActivator?.onDestroy() }
+    wifiActivator = null
+    runCatching { ThingHomeSdk.getBleOperator().stopLeScan() }
+  }
+
   // ---------- RN event emitter plumbing (no-op; bắt buộc cho NativeEventEmitter) ----------
   override fun addListener(eventName: String) {}
   override fun removeListeners(count: Double) {}
+
+  // Dọn activator + scan khi RN instance huỷ (reload/unmount) → tránh leak scan nền + listener.
+  override fun invalidate() {
+    super.invalidate()
+    runCatching { wifiActivator?.stop(); wifiActivator?.onDestroy() }
+    wifiActivator = null
+    runCatching { ThingHomeSdk.getBleOperator().stopLeScan() }
+    scannedBle.clear()
+  }
 
   // ---------- helpers ----------
   private fun deviceToMap(bean: DeviceBean?): WritableMap {

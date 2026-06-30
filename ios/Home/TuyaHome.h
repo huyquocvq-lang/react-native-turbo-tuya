@@ -1,5 +1,7 @@
 #import <TurboTuyaSpec/TurboTuyaSpec.h>
+#import "TuyaEventEmitter.h"
 
-@interface TuyaHome : NSObject <NativeTuyaHomeSpec>
+// Phát event 'onHomeChange' → subclass TuyaEventEmitter (RCTEventEmitter) thay vì NSObject.
+@interface TuyaHome : TuyaEventEmitter <NativeTuyaHomeSpec>
 
 @end

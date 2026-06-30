@@ -22,7 +22,8 @@ RCT_EXPORT_MODULE()
 }
 
 - (void)getSdkVersion:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject {
-  resolve(@"thingsmart:ios");
+  // Tuya iOS không expose version API ổn định → trả version đã pin (pod ThingSmartHomeKit ~7.5).
+  resolve(@"thingsmart:7.5.0");
 }
 
 - (void)destroySdk {
