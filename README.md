@@ -7,21 +7,23 @@ Split by feature into **12 independent TurboModules** (one Codegen spec each). L
 | Module | API group | Android | iOS |
 |---|---|---|---|
 | `TuyaCore` | init / version / destroy | ✅ | ✅ |
-| `TuyaAuth` | email + 3rd-party login, profile, session *(events)* | ✅ | ◑ profile/session; email-login TODO |
-| `TuyaHome` | home CRUD + weather + change/status listeners *(events)* | ✅ | ❌ |
-| `TuyaDevice` | DP control + status + device management *(events)* | ✅ | ❌ |
-| `TuyaPairing` | Wi-Fi EZ/AP, BLE, combo BLE+Wi-Fi, auto-token; advanced sub-device/gateway/QR/wired *(events)* | ✅ core · ◑ advanced | ❌ |
-| `TuyaOta` | firmware check / upgrade + auto-switch *(events)* | ✅ | ❌ |
-| `TuyaScene` | scenes + automations (conditions/actions) *(events)* | ◑ skeleton | ❌ |
-| `TuyaTimer` | cloud schedules (add/update/remove/status) | ✅ · ◑ list | ❌ |
-| `TuyaMessage` | push status + message center + DND | ✅ · ◑ list/by-type | ❌ |
-| `TuyaMember` | home members + invitation + transfer owner | ◑ | ❌ |
-| `TuyaMatter` | Matter device pairing *(events)* | ◑ skeleton | ❌ |
-| `TuyaMesh` | BLE SIG / Tuya mesh *(events)* | ◑ skeleton | ❌ |
+| `TuyaAuth` | email + 3rd-party login, profile, session *(events)* | ✅ | ✅ email-login + profile/session · ◑ code-login/3rd-party |
+| `TuyaHome` | home CRUD + weather + change/status listeners *(events)* | ✅ | ✅ · ◑ weather-detail |
+| `TuyaDevice` | DP control + status + device management *(events)* | ✅ | ✅ DP/status/snapshot/rename · ◑ BLE/await-ack |
+| `TuyaPairing` | Wi-Fi EZ/AP, BLE, combo BLE+Wi-Fi, auto-token; advanced sub-device/gateway/QR/wired *(events)* | ✅ core · ◑ advanced | ✅ core · ◑ advanced |
+| `TuyaOta` | firmware check / upgrade + auto-switch *(events)* | ✅ | ✅ check/start/cancel + progress · ◑ auto-switch |
+| `TuyaScene` | scenes + automations (conditions/actions) *(events)* | ◑ skeleton | ◑ list/execute/enable/disable/delete |
+| `TuyaTimer` | cloud schedules (add/update/remove/status) | ✅ · ◑ list | ◑ list/remove |
+| `TuyaMessage` | push status + message center + DND | ✅ · ◑ list/by-type | ◑ push + DND on/off |
+| `TuyaMember` | home members + invitation + transfer owner | ◑ | ◑ query/remove/process/transfer |
+| `TuyaMatter` | Matter device pairing *(events)* | ◑ skeleton (intended-call) | ◑ skeleton (verbatim intended-call) |
+| `TuyaMesh` | BLE SIG / Tuya mesh *(events)* | ◑ create/list/DP intended-call | ✅ create/list/DP/client/search/activate (best-effort) |
 
 > **Status:** Nothing device-tested yet (building needs JDK 17 + Android SDK for Android, macOS + Xcode for iOS).
 > **Android** wires the common flows (Core, Auth, Home incl. weather/listeners, Device, OTA, Pairing core + combo/auto-token, and most of Scene-adjacent Timer/Message/Member). Items marked ◑ *skeleton* (Scene, Matter, Mesh, advanced pairing) and a few bean/enum-dependent methods are **typed stubs that reject with `not_implemented` and carry the exact intended SDK call in a comment** — their underlying Tuya APIs weren't captured verbatim, so they're wired on a real-SDK machine.
-> **iOS** has `TuyaCore.initSdk` + `TuyaAuth` profile/session wired; the rest is a typed skeleton (TODO) to finish in Xcode. The event infrastructure (`RCTEventEmitter`) is in place for every event-emitting module.
+> **iOS**: the full ice-bath happy path is wired — `TuyaCore.initSdk`, `TuyaAuth` (email send-code/login/register + profile/session), `TuyaHome` (CRUD + weather + listeners), `TuyaPairing` (token + Wi-Fi EZ/AP + BLE + combo + auto-token) and `TuyaDevice` (DP control + status + snapshot + rename/remove). Also partially wired on iOS: `TuyaOta` (check/start/cancel + progress), `TuyaScene` (list/execute/enable/disable/delete), `TuyaTimer` (list/remove), `TuyaMessage` (push status + DND on/off). `TuyaMember` is partially wired too (query/remove/processInvitation/transferHomeOwner). Still TODO on iOS: Auth code-login/3rd-party, advanced pairing, OTA auto-switch, Scene save/build, Timer add/update, Message list/DND-write, Member add/update + invitation, and a few Device extras (BLE/await-ack). **`TuyaMesh`**: the spec now carries `homeId` + `meshType` ('sig'|'tuya'), and **iOS is wired best-effort** (create/list/DP via `ThingSmartBleMesh`; client/search/activate via `ThingSmartSIGMeshManager` / `ThingBLEMeshManager`) per the verbatim in [docs/research/tuya-home-sdk-matter-mesh-ios.md](../../docs/research/tuya-home-sdk-matter-mesh-ios.md) — flagged ⚠️ for on-device verification of model properties. Android Mesh signatures match the spec but bodies stay intended-call (SDK import packages aren't in the docs).
+
+**`TuyaMatter`**: documented skeleton on both platforms with verbatim intended-calls. iOS uses a *unified* `ThingSmartActivatorDiscovery` flow (≠ Android's dedicated `IMatterActivator`); full wiring is blocked on one open detail (how to construct `ThingSmartActivatorTypeMatterModel`) + Android import packages. Ice-bath devices almost certainly don't use Matter, so this is left as a documented follow-up. The event infrastructure (`RCTEventEmitter`) is in place for every event-emitting module.
 
 ## Installation
 

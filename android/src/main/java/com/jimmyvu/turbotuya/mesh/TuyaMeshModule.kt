@@ -50,16 +50,23 @@ class TuyaMeshModule(reactContext: ReactApplicationContext) :
   override fun createTuyaMesh(homeId: Double, name: String, promise: Promise) = todo(promise, "createTuyaMesh")
   override fun getMeshList(homeId: Double, promise: Promise) = todo(promise, "getMeshList")
 
-  override fun startMeshClient(meshId: String, searchTimeSec: Double) { /* intended: getThingSigMeshClient().initMesh+startClient */ }
-  override fun stopMeshClient(meshId: String) { /* intended: getThingSigMeshClient().stopClient() */ }
-  override fun searchSubDevices(meshId: String, timeoutSec: Double) { /* intended: startSearch()+SearchBuilder→emit onMeshDeviceFound */ }
+  // meshType: 'sig' → getThingSigMeshClient()/newSigMeshDeviceInstance ; 'tuya' → getThingBlueMeshClient()/newBlueMeshDeviceInstance.
+  override fun startMeshClient(homeId: Double, meshId: String, meshType: String, searchTimeSec: Double) {
+    /* intended: <client>.initMesh(meshId)+startClient(<meshBean>) — cần bean từ list + package chưa verbatim */
+  }
+  override fun stopMeshClient(homeId: Double, meshId: String, meshType: String) {
+    /* intended: <client>.stopClient() */
+  }
+  override fun searchSubDevices(homeId: Double, meshId: String, meshType: String, timeoutSec: Double) {
+    /* intended: <client>.startSearch()+SearchBuilder→onSearched(SearchDeviceBean)→emit onMeshDeviceFound */
+  }
 
-  override fun activateSubDevice(meshId: String, mac: String, timeoutSec: Double, promise: Promise) =
-    todo(promise, "activateSubDevice")
-  override fun publishMeshDps(meshId: String, nodeId: String, pcc: String, dpsJson: String, promise: Promise) =
-    todo(promise, "publishMeshDps")
-  override fun multicastMeshDps(meshId: String, localId: String, pcc: String, dpsJson: String, promise: Promise) =
-    todo(promise, "multicastMeshDps")
+  override fun activateSubDevice(homeId: Double, meshId: String, meshType: String, mac: String, timeoutSec: Double, promise: Promise) =
+    todo(promise, "activateSubDevice") // intended: Thing(Sig|Blue)MeshActivatorBuilder.setSearchDeviceBeans+setListener→onSuccess(mac,DeviceBean)
+  override fun publishMeshDps(homeId: Double, meshId: String, meshType: String, nodeId: String, pcc: String, dpsJson: String, promise: Promise) =
+    todo(promise, "publishMeshDps") // intended: new(Sig|Blue)MeshDeviceInstance(meshId).publishDps(nodeId,pcc,dps,IResultCallback)
+  override fun multicastMeshDps(homeId: Double, meshId: String, meshType: String, localId: String, pcc: String, dpsJson: String, promise: Promise) =
+    todo(promise, "multicastMeshDps") // intended: ...multicastDps(localId,pcc,dps,IResultCallback)
 
   // ---------- RN event emitter plumbing (no-op; bắt buộc cho NativeEventEmitter) ----------
   override fun addListener(eventName: String) {}

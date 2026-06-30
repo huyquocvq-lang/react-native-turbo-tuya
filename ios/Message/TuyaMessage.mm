@@ -1,6 +1,11 @@
 #import "TuyaMessage.h"
+#import <ThingSmartHomeKit/ThingSmartKit.h>
 
-// TuyaMessage (iOS) — TODO-reject. Wire trên Xcode:
+// WIRED (iOS): push status (total + by-type, [ThingSmartSDK sharedInstance]) + DND on/off (ThingSmartMessageSetting).
+// ⚠️ Verify: get*PushStatusWithSuccess block type (ThingSuccessBOOL); typo cố hữu 'Stauts'; ThingSmartMessageSetting init
+//    + selector getDeviceDNDSettingstatusSuccess: / setDeviceDNDSettingStatus:.
+// Còn TODO (iOS): registerDevice (deviceToken NSData), message-list/detail/hasNew/read/delete (request model + bean fields),
+//    DND list/add/modify/remove (request model). Wire trên Xcode:
 //   message: ThingSmartMessage fetchMessageListWithListRequestModel:/fetchMessageDetailListWithListRequestModel:/
 //            readMessageWithReadRequestModel:/deleteMessageWithDeleteRequestModel:/getLatestMessageWithSuccess:
 //   push:    [ThingSmartSDK sharedInstance] deviceToken + get/setPushStatusWithStatus + get/setDevice|Family|Notice|MarketingPushStatusWithStauts (TYPO 'Stauts')
@@ -65,28 +70,63 @@ RCT_EXPORT_MODULE()
 
 // ---------- Push status ----------
 - (void)getPushStatus:(RCTPromiseResolveBlock)resolve
-               reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"getPushStatus", reject); }
+               reject:(RCTPromiseRejectBlock)reject {
+  [[ThingSmartSDK sharedInstance] getPushStatusWithSuccess:^(BOOL b) { resolve(@(b)); }
+                                                   failure:^(NSError *e) { reject(@"push_status_error", e.localizedDescription, e); }];
+}
 
 - (void)setPushStatus:(BOOL)open
               resolve:(RCTPromiseResolveBlock)resolve
-               reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"setPushStatus", reject); }
+               reject:(RCTPromiseRejectBlock)reject {
+  [[ThingSmartSDK sharedInstance] setPushStatusWithStatus:open
+                                                  success:^{ resolve(@(open)); }
+                                                  failure:^(NSError *e) { reject(@"push_status_error", e.localizedDescription, e); }];
+}
 
 - (void)getPushStatusByType:(NSString *)pushType
                     resolve:(RCTPromiseResolveBlock)resolve
-                     reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"getPushStatusByType", reject); }
+                     reject:(RCTPromiseRejectBlock)reject {
+  ThingSmartSDK *sdk = [ThingSmartSDK sharedInstance];
+  NSString *t = pushType.lowercaseString;
+  void (^ok)(BOOL) = ^(BOOL b) { resolve(@(b)); };
+  void (^fail)(NSError *) = ^(NSError *e) { reject(@"push_status_error", e.localizedDescription, e); };
+  if ([t isEqualToString:@"family"]) { [sdk getFamilyPushStatusWithSuccess:ok failure:fail]; }
+  else if ([t isEqualToString:@"notification"]) { [sdk getNoticePushStatusWithSuccess:ok failure:fail]; }
+  else if ([t isEqualToString:@"marketing"]) { [sdk getMarketingPushStatusWithSuccess:ok failure:fail]; }
+  else { [sdk getDevicePushStatusWithSuccess:ok failure:fail]; } // 'alarm'
+}
 
 - (void)setPushStatusByType:(NSString *)pushType
                        open:(BOOL)open
                     resolve:(RCTPromiseResolveBlock)resolve
-                     reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"setPushStatusByType", reject); }
+                     reject:(RCTPromiseRejectBlock)reject {
+  ThingSmartSDK *sdk = [ThingSmartSDK sharedInstance];
+  NSString *t = pushType.lowercaseString;
+  void (^ok)(void) = ^{ resolve(@(open)); };
+  void (^fail)(NSError *) = ^(NSError *e) { reject(@"push_status_error", e.localizedDescription, e); };
+  // Tuya iOS typo cố hữu: 'Stauts'.
+  if ([t isEqualToString:@"family"]) { [sdk setFamilyPushStatusWithStauts:open success:ok failure:fail]; }
+  else if ([t isEqualToString:@"notification"]) { [sdk setNoticePushStatusWithStauts:open success:ok failure:fail]; }
+  else if ([t isEqualToString:@"marketing"]) { [sdk setMarketingPushStatusWithStauts:open success:ok failure:fail]; }
+  else { [sdk setDevicePushStatusWithStauts:open success:ok failure:fail]; } // 'alarm'
+}
 
 // ---------- Do-Not-Disturb ----------
 - (void)getDndStatus:(RCTPromiseResolveBlock)resolve
-              reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"getDndStatus", reject); }
+              reject:(RCTPromiseRejectBlock)reject {
+  ThingSmartMessageSetting *s = [[ThingSmartMessageSetting alloc] init];
+  [s getDeviceDNDSettingstatusSuccess:^(BOOL b) { resolve(@(b)); }
+                              failure:^(NSError *e) { reject(@"dnd_status_error", e.localizedDescription, e); }];
+}
 
 - (void)setDndStatus:(BOOL)open
              resolve:(RCTPromiseResolveBlock)resolve
-              reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"setDndStatus", reject); }
+              reject:(RCTPromiseRejectBlock)reject {
+  ThingSmartMessageSetting *s = [[ThingSmartMessageSetting alloc] init];
+  [s setDeviceDNDSettingStatus:open
+                       success:^{ resolve(@(open)); }
+                       failure:^(NSError *e) { reject(@"dnd_status_error", e.localizedDescription, e); }];
+}
 
 - (void)getDndList:(RCTPromiseResolveBlock)resolve
             reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"getDndList", reject); }

@@ -25,26 +25,44 @@ export interface Spec extends TurboModule {
   getMeshList(homeId: number): Promise<MeshInfo[]>;
 
   // --- Client lifecycle (connect proxy) ---
-  startMeshClient(meshId: string, searchTimeSec: number): void;
-  stopMeshClient(meshId: string): void;
+  // meshType: 'sig' | 'tuya' — chọn SIG (ThingSmartSIGMeshManager) vs Tuya (ThingBLEMeshManager) manager.
+  // homeId: bắt buộc để dựng mesh instance (iOS bleMeshWithMeshId:homeId:) + SIG manager.
+  startMeshClient(
+    homeId: number,
+    meshId: string,
+    meshType: string,
+    searchTimeSec: number
+  ): void;
+  stopMeshClient(homeId: number, meshId: string, meshType: string): void;
 
   // --- Tìm + active sub-device ---
-  searchSubDevices(meshId: string, timeoutSec: number): void; // -> onMeshDeviceFound
-  activateSubDevice(
+  searchSubDevices(
+    homeId: number,
     meshId: string,
+    meshType: string,
+    timeoutSec: number
+  ): void; // -> onMeshDeviceFound
+  activateSubDevice(
+    homeId: number,
+    meshId: string,
+    meshType: string,
     mac: string,
     timeoutSec: number
   ): Promise<MeshSubDevice>;
 
   // --- Điều khiển DP qua mesh ---
   publishMeshDps(
+    homeId: number,
     meshId: string,
+    meshType: string,
     nodeId: string,
     pcc: string,
     dpsJson: string
   ): Promise<void>;
   multicastMeshDps(
+    homeId: number,
     meshId: string,
+    meshType: string,
     localId: string,
     pcc: string,
     dpsJson: string

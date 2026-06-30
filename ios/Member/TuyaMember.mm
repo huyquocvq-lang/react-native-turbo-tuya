@@ -1,24 +1,51 @@
 #import "TuyaMember.h"
+#import <ThingSmartHomeKit/ThingSmartKit.h>
 
-// TuyaMember (iOS) — TODO-reject. Wire trên Xcode (ThingSmartHome member API):
-//   query: getHomeMemberListWithSuccess: ; add: addHomeMemberWithAddMemeberRequestModel: ;
-//   update: updateHomeMemberInfoWithMemberRequestModel: ; remove: removeHomeMemberWithMemberId: ;
-//   invitation: (Biz ThingSmartMemberBiz) ; process: joinFamilyWithAccept: ;
-//   transfer: transferHomeWithMemberId: . Verbatim: docs/research/tuya-home-sdk-home-management.md.
+// TuyaMember (iOS) — WIRED: queryMembers (getHomeMemberListWithSuccess:) + removeMember (removeHomeMemberWithMemberId:)
+// + processInvitation (joinFamilyWithAccept:) + transferHomeOwner (transferHomeWithMemberId:). Verbatim:
+// docs/research/tuya-home-sdk-home-management.md (section C iOS).
+// TODO: addMember/updateMember (request model field chưa verbatim), invitation create/list/cancel/updateInvited/joinByCode (Biz).
+// ⚠️ Verify: property ThingSmartHomeMemberModel (memberId/account/name/admin/role/dealStatus/headPic/invitationCode).
 static void TuyaTODO(NSString *what, RCTPromiseRejectBlock reject) {
   reject(@"ios_todo",
          [NSString stringWithFormat:@"iOS '%@' chưa wire — xem docs/research/tuya-home-sdk-home-management.md.", what],
          nil);
 }
 
+static NSDictionary *TuyaMemberMap(ThingSmartHomeMemberModel *m) {
+  return @{
+    @"memberId": @(m.memberId),
+    @"account": m.account ?: @"",
+    @"name": m.name ?: @"",
+    @"admin": @(m.admin),
+    @"role": @(m.role),
+    @"status": @(m.dealStatus),
+    @"headPic": m.headPic ?: @"",
+    @"mobile": @"",
+    @"invitationCode": m.invitationCode ?: @"",
+  };
+}
+
 @implementation TuyaMember
 
 RCT_EXPORT_MODULE()
 
+- (ThingSmartHome *)homeOf:(double)homeId {
+  return [ThingSmartHome homeWithHomeId:(long long)homeId];
+}
+
 // ---------- Member CRUD ----------
 - (void)queryMembers:(double)homeId
              resolve:(RCTPromiseResolveBlock)resolve
-              reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"queryMembers", reject); }
+              reject:(RCTPromiseRejectBlock)reject {
+  ThingSmartHome *home = [self homeOf:homeId];
+  if (!home) { reject(@"no_home", @"Không tìm thấy home", nil); return; }
+  [home getHomeMemberListWithSuccess:^(NSArray<ThingSmartHomeMemberModel *> *list) {
+    NSMutableArray *out = [NSMutableArray array];
+    for (ThingSmartHomeMemberModel *m in list) { [out addObject:TuyaMemberMap(m)]; }
+    resolve(out);
+  } failure:^(NSError *e) { reject(@"member_list_error", e.localizedDescription, e); }];
+}
 
 - (void)addMember:(double)homeId
           account:(NSString *)account
@@ -40,7 +67,13 @@ RCT_EXPORT_MODULE()
 - (void)removeMember:(double)homeId
             memberId:(double)memberId
              resolve:(RCTPromiseResolveBlock)resolve
-              reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"removeMember", reject); }
+              reject:(RCTPromiseRejectBlock)reject {
+  ThingSmartHome *home = [self homeOf:homeId];
+  if (!home) { reject(@"no_home", @"Không tìm thấy home", nil); return; }
+  [home removeHomeMemberWithMemberId:(long long)memberId
+                             success:^{ resolve(nil); }
+                             failure:^(NSError *e) { reject(@"remove_member_error", e.localizedDescription, e); }];
+}
 
 // ---------- Invitation ----------
 - (void)createInvitation:(double)homeId
@@ -68,13 +101,25 @@ RCT_EXPORT_MODULE()
 - (void)processInvitation:(double)homeId
                    accept:(BOOL)accept
                   resolve:(RCTPromiseResolveBlock)resolve
-                   reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"processInvitation", reject); }
+                   reject:(RCTPromiseRejectBlock)reject {
+  ThingSmartHome *home = [self homeOf:homeId];
+  if (!home) { reject(@"no_home", @"Không tìm thấy home", nil); return; }
+  [home joinFamilyWithAccept:accept
+                     success:^(BOOL result) { resolve(nil); }
+                     failure:^(NSError *e) { reject(@"process_invitation_error", e.localizedDescription, e); }];
+}
 
 // ---------- Transfer owner ----------
 - (void)transferHomeOwner:(double)homeId
                  memberId:(double)memberId
                   resolve:(RCTPromiseResolveBlock)resolve
-                   reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"transferHomeOwner", reject); }
+                   reject:(RCTPromiseRejectBlock)reject {
+  ThingSmartHome *home = [self homeOf:homeId];
+  if (!home) { reject(@"no_home", @"Không tìm thấy home", nil); return; }
+  [home transferHomeWithMemberId:(long long)memberId
+                         success:^{ resolve(nil); }
+                         failure:^(NSError *e) { reject(@"transfer_owner_error", e.localizedDescription, e); }];
+}
 
 // ---------- TurboModule boilerplate ----------
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:

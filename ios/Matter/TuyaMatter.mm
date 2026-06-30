@@ -1,9 +1,15 @@
 #import "TuyaMatter.h"
 
-// TuyaMatter (iOS) — SKELETON TODO-reject. Matter cần: entitlement `matter.allow-setup-payload`, Bonjour trong
-// Info.plist, `is_matter_support=true`, App Group (setMatterConfigKey). Wire trên Xcode (ThingSmartMatterActivator +
-// ThingSmartActivatorDiscovery): parseSetupCode: / connect+commission / startSearch:+startActive: / continueCommissioningDevice:.
-// Verbatim/đối chiếu: docs/research/tuya-home-sdk-device-pairing.md §5 + §4 (iOS Matter).
+// TuyaMatter (iOS) — SKELETON TODO-reject. iOS dùng API HỢP NHẤT ThingSmartActivatorDiscovery (KHÁC Android dedicated)
+// → spec parseSetupCode/connectDevice/commissionDevice LỆCH flow iOS (search→startActive). Cần chỉnh spec trước khi wire sạch.
+// Prereq iOS: + setMatterConfigKey:(appGroupId) + entitlement matter.allow-setup-payload + Bonjour + is_matter_support.
+// Verbatim iOS (intended-call) ở docs/research/tuya-home-sdk-matter-mesh-ios.md §A:
+//   token: [ThingSmartActivator getTokenWithHomeId:success:failure:]
+//   parse: [discovery parseSetupCode:(NSString*)] → ThingSmartActivatorDeviceModel (GIỮ)
+//   discover: registerWithActivatorList:@[ThingSmartActivatorTypeMatterModel] → loadConfig → setupDelegate: → startSearch:
+//   commission: startActive:(typeMatterModel{token,ssid,password,spaceId,timeout}) deviceList:@[deviceModel]
+//   delegate: matterCommissioningSessionEstablishmentComplete: / matterDeviceAttestation:error:
+//   attestation: continueCommissioningDevice:ignoreAttestationFailure:error: ; stop: stopActive:clearCache:
 static void TuyaTODO(NSString *what, RCTPromiseRejectBlock reject) {
   reject(@"ios_todo",
          [NSString stringWithFormat:@"iOS '%@' chưa wire — xem docs/research/tuya-home-sdk-device-pairing.md §5.", what],

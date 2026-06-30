@@ -1,9 +1,10 @@
 #import "TuyaAuth.h"
 #import <ThingSmartHomeKit/ThingSmartKit.h>
 
-// TuyaAuth (iOS) — profile/session/reset/cancel/multi-device implement theo selector verbatim
-// (docs/research/tuya-home-sdk-user-account.md). Email login/register/thirdLogin VẪN TODO-reject
-// (luồng login iOS làm sau). bind/getLinked third-party chưa có selector verbatim → TODO.
+// TuyaAuth (iOS) — profile/session/reset/cancel/multi-device + email send-code/login/register theo selector
+// (docs/research/tuya-home-sdk-user-account.md). loginWithEmailCode + thirdLogin + bind/getLinked VẪN TODO.
+// ⚠️ loginByEmail/registerByEmail là selector chuẩn Tuya (KHÔNG có verbatim trong note) — verify khi build;
+//    sendVerifyCode dùng ThingSuccessBlock (signature void/id verify trên header).
 static void TuyaTODO(NSString *what, RCTPromiseRejectBlock reject) {
   reject(@"ios_todo",
          [NSString stringWithFormat:@"iOS '%@' chưa wire — xem docs/research/tuya-home-sdk-user-account.md.", what],
@@ -55,20 +56,41 @@ RCT_EXPORT_MODULE()
            countryCode:(NSString *)countryCode
                   type:(double)type
                resolve:(RCTPromiseResolveBlock)resolve
-                reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"sendVerifyCode", reject); }
+                reject:(RCTPromiseRejectBlock)reject {
+  // type: 1 register, 2 login, 3 reset, 8 unregister.
+  [[ThingSmartUser sharedInstance] sendVerifyCodeWithUserName:email
+                                                       region:nil
+                                                  countryCode:countryCode
+                                                         type:(NSInteger)type
+                                                      success:^{ resolve(nil); }
+                                                      failure:^(NSError *e) { reject(@"send_code_error", e.localizedDescription, e); }];
+}
 
 - (void)registerWithEmail:(NSString *)countryCode
                     email:(NSString *)email
                  password:(NSString *)password
                      code:(NSString *)code
                   resolve:(RCTPromiseResolveBlock)resolve
-                   reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"registerWithEmail", reject); }
+                   reject:(RCTPromiseRejectBlock)reject {
+  [[ThingSmartUser sharedInstance] registerByEmail:countryCode
+                                             email:email
+                                          password:password
+                                              code:code
+                                           success:^{ resolve(TuyaUserMap([ThingSmartUser sharedInstance])); }
+                                           failure:^(NSError *e) { reject(@"register_error", e.localizedDescription, e); }];
+}
 
 - (void)loginWithEmail:(NSString *)countryCode
                  email:(NSString *)email
               password:(NSString *)password
                resolve:(RCTPromiseResolveBlock)resolve
-                reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"loginWithEmail", reject); }
+                reject:(RCTPromiseRejectBlock)reject {
+  [[ThingSmartUser sharedInstance] loginByEmail:countryCode
+                                          email:email
+                                       password:password
+                                        success:^{ resolve(TuyaUserMap([ThingSmartUser sharedInstance])); }
+                                        failure:^(NSError *e) { reject(@"login_error", e.localizedDescription, e); }];
+}
 
 - (void)loginWithEmailCode:(NSString *)countryCode
                      email:(NSString *)email

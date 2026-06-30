@@ -1,8 +1,10 @@
 #import "TuyaScene.h"
+#import <ThingSmartHomeKit/ThingSmartKit.h>
 
-// TuyaScene (iOS) — SKELETON TODO-reject. Wire bằng ThingSmartSceneManager + ThingSmartScene +
-// ThingSmartSceneConditionFactory/ActionFactory trên Xcode (selector verbatim ở docs/research/tuya-home-sdk-smart-scenes.md).
-// Event onSceneChange phát qua TuyaEventEmitter khi wire (iOS không có MQTT listener rõ → refresh list).
+// TuyaScene (iOS) — WIRED: getSceneList + execute/enable/disable/delete (ThingSmartSceneManager + ThingSmartScene).
+// TODO: detail/save/modify + build* condition/action (factory models) + device/city lists — chưa verbatim đủ.
+// Event onSceneChange: iOS không có MQTT listener rõ → no-op (refresh list ở JS). Verbatim: docs/research/tuya-home-sdk-smart-scenes.md.
+// ⚠️ Verify: ThingSmartSceneModel property (ruleGenre/displayColor/coverIcon — chưa map), deleteSceneWithSuccess: selector.
 static void TuyaTODO(NSString *what, RCTPromiseRejectBlock reject) {
   reject(@"ios_todo",
          [NSString stringWithFormat:@"iOS '%@' chưa wire — xem docs/research/tuya-home-sdk-smart-scenes.md.", what],
@@ -18,7 +20,25 @@ RCT_EXPORT_MODULE()
 // ---------- List / detail ----------
 - (void)getSceneList:(double)homeId
              resolve:(RCTPromiseResolveBlock)resolve
-              reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"getSceneList", reject); }
+              reject:(RCTPromiseRejectBlock)reject {
+  [[ThingSmartSceneManager sharedInstance] getSceneListWithHomeId:(long long)homeId
+                                                          success:^(NSArray<ThingSmartSceneModel *> *list) {
+    NSMutableArray *out = [NSMutableArray array];
+    for (ThingSmartSceneModel *m in list) {
+      // ⚠️ ruleGenre/displayColor/coverIcon chưa map (property cần verify); sceneId/name/enabled/matchType an toàn.
+      [out addObject:@{
+        @"sceneId": m.sceneId ?: @"",
+        @"name": m.name ?: @"",
+        @"ruleGenre": @0,
+        @"enabled": @(m.enabled),
+        @"matchType": @(m.matchType),
+        @"displayColor": @"",
+        @"coverIcon": @"",
+      }];
+    }
+    resolve(out);
+  } failure:^(NSError *e) { reject(@"scene_list_error", e.localizedDescription, e); }];
+}
 
 - (void)getSceneDetail:(double)homeId
                sceneId:(NSString *)sceneId
@@ -40,21 +60,37 @@ RCT_EXPORT_MODULE()
 - (void)deleteScene:(double)homeId
             sceneId:(NSString *)sceneId
             resolve:(RCTPromiseResolveBlock)resolve
-             reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"deleteScene", reject); }
+             reject:(RCTPromiseRejectBlock)reject {
+  ThingSmartScene *scene = [ThingSmartScene sceneWithSceneId:sceneId];
+  [scene deleteSceneWithSuccess:^{ resolve(nil); }
+                        failure:^(NSError *e) { reject(@"delete_scene_error", e.localizedDescription, e); }];
+}
 
 // ---------- Execute / automation ----------
 - (void)executeScene:(double)homeId
              sceneId:(NSString *)sceneId
              resolve:(RCTPromiseResolveBlock)resolve
-              reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"executeScene", reject); }
+              reject:(RCTPromiseRejectBlock)reject {
+  ThingSmartScene *scene = [ThingSmartScene sceneWithSceneId:sceneId];
+  [scene executeSceneWithSuccess:^{ resolve(nil); }
+                         failure:^(NSError *e) { reject(@"execute_scene_error", e.localizedDescription, e); }];
+}
 
 - (void)enableAutomation:(NSString *)sceneId
                  resolve:(RCTPromiseResolveBlock)resolve
-                  reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"enableAutomation", reject); }
+                  reject:(RCTPromiseRejectBlock)reject {
+  ThingSmartScene *scene = [ThingSmartScene sceneWithSceneId:sceneId];
+  [scene enableSceneWithSuccess:^{ resolve(nil); }
+                        failure:^(NSError *e) { reject(@"enable_scene_error", e.localizedDescription, e); }];
+}
 
 - (void)disableAutomation:(NSString *)sceneId
                   resolve:(RCTPromiseResolveBlock)resolve
-                   reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"disableAutomation", reject); }
+                   reject:(RCTPromiseRejectBlock)reject {
+  ThingSmartScene *scene = [ThingSmartScene sceneWithSceneId:sceneId];
+  [scene disableSceneWithSuccess:^{ resolve(nil); }
+                         failure:^(NSError *e) { reject(@"disable_scene_error", e.localizedDescription, e); }];
+}
 
 - (void)enableAutomationWithTime:(NSString *)sceneId
                        durationMs:(double)durationMs

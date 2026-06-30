@@ -1,12 +1,22 @@
 #import "TuyaTimer.h"
+#import <ThingSmartHomeKit/ThingSmartKit.h>
 
-// TuyaTimer (iOS) — TODO-reject. Wire bằng ThingSmartTimer (addTimerWithTask:loops:bizId:bizType:time:dps:status:
-// isAppPush:aliasName:.../getTimerListWithTask:bizId:bizType:/updateTimerStatusWithTask:.../removeTimerWithTask:...)
-// trên Xcode — selector verbatim ở docs/research/tuya-home-sdk-device-control.md. Android wired.
+// TuyaTimer (iOS) — WIRED: getTimerList + removeTimer (ThingSmartTimer, key theo task/bizId/bizType).
+// Verbatim: docs/research/tuya-home-sdk-device-control.md (ThingSmartTimer header).
+// TODO: addTimer/updateTimer/updateTimerStatus — chữ ký đầy đủ (time/dps/status/isAppPush) + map inputJson cần verify.
+// ⚠️ Verify: ThingSmartTimer sharedInstance + property ThingTimerModel (timerId/time/loops/status/dps/aliasName);
+//    removeTimerWithTask xoá theo task (KHÔNG theo timerIds — iOS không expose per-id verbatim).
 static void TuyaTODO(NSString *what, RCTPromiseRejectBlock reject) {
   reject(@"ios_todo",
          [NSString stringWithFormat:@"iOS '%@' chưa wire — xem docs/research/tuya-home-sdk-device-control.md (timer).", what],
          nil);
+}
+
+static NSString *TuyaJsonStr(id obj) {
+  if (![obj isKindOfClass:[NSDictionary class]]) return @"{}";
+  if (![NSJSONSerialization isValidJSONObject:obj]) return @"{}";
+  NSData *d = [NSJSONSerialization dataWithJSONObject:obj options:0 error:nil];
+  return d ? [[NSString alloc] initWithData:d encoding:NSUTF8StringEncoding] : @"{}";
 }
 
 @implementation TuyaTimer
@@ -18,22 +28,47 @@ RCT_EXPORT_MODULE()
           reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"addTimer", reject); }
 
 - (void)updateTimer:(NSString *)timerId
-         inputJson:(NSString *)inputJson
-           resolve:(RCTPromiseResolveBlock)resolve
-            reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"updateTimer", reject); }
+          inputJson:(NSString *)inputJson
+            resolve:(RCTPromiseResolveBlock)resolve
+             reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"updateTimer", reject); }
 
 - (void)removeTimer:(NSString *)taskName
               bizId:(NSString *)bizId
             bizType:(NSString *)bizType
            timerIds:(NSArray *)timerIds
             resolve:(RCTPromiseResolveBlock)resolve
-             reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"removeTimer", reject); }
+             reject:(RCTPromiseRejectBlock)reject {
+  // timerIds bỏ qua trên iOS — removeTimerWithTask xoá toàn bộ timer của task/bizId/bizType.
+  [[ThingSmartTimer sharedInstance] removeTimerWithTask:taskName
+                                                  bizId:bizId
+                                                bizType:(NSUInteger)bizType.integerValue
+                                                success:^{ resolve(nil); }
+                                                failure:^(NSError *e) { reject(@"remove_timer_error", e.localizedDescription, e); }];
+}
 
 - (void)getTimerList:(NSString *)taskName
                bizId:(NSString *)bizId
              bizType:(NSString *)bizType
              resolve:(RCTPromiseResolveBlock)resolve
-              reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"getTimerList", reject); }
+              reject:(RCTPromiseRejectBlock)reject {
+  [[ThingSmartTimer sharedInstance] getTimerListWithTask:taskName
+                                                   bizId:bizId
+                                                 bizType:(NSUInteger)bizType.integerValue
+                                                 success:^(NSArray<ThingTimerModel *> *list) {
+    NSMutableArray *out = [NSMutableArray array];
+    for (ThingTimerModel *t in list) {
+      [out addObject:@{
+        @"timerId": t.timerId ?: @"",
+        @"time": t.time ?: @"",
+        @"loops": t.loops ?: @"",
+        @"status": @(t.status),
+        @"dpsJson": TuyaJsonStr(t.dps),
+        @"aliasName": t.aliasName ?: @"",
+      }];
+    }
+    resolve(out);
+  } failure:^(NSError *e) { reject(@"timer_list_error", e.localizedDescription, e); }];
+}
 
 - (void)updateTimerStatus:(NSString *)taskName
                     bizId:(NSString *)bizId
