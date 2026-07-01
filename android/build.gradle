@@ -53,6 +53,8 @@ repositories {
   // Repo Maven của Tuya (bắt buộc để resolve thingsmart)
   maven { url "https://maven-other.tuya.com/repository/maven-releases/" }
   maven { url "https://maven-other.tuya.com/repository/maven-commercial-releases/" }
+  // fastjson bản `*.android` nằm ở Aliyun public (không có trên mavenCentral).
+  maven { url "https://maven.aliyun.com/repository/public" }
 }
 
 // Tuya `thingsmart` kéo theo `thingsmart-modularCampAnno:1.0.0-SNAPSHOT` (chỉ có bản SNAPSHOT,
@@ -66,6 +68,10 @@ dependencies {
   implementation "com.facebook.react:react-android"
   // Tuya Smart Life App SDK (Wi-Fi + BLE). `api` để app tiêu thụ thấy được.
   api "com.thingclips.smart:thingsmart:7.5.6"
+  // Dependency runtime BẮT BUỘC của Tuya SDK (theo hướng dẫn tích hợp chính thức) —
+  // thiếu sẽ NoClassDefFoundError lúc ThingHomeSdk.init() dù compile vẫn qua.
+  api "com.alibaba:fastjson:1.1.67.android"
+  api "com.squareup.okhttp3:okhttp-urlconnection:3.14.9"
   // LƯU Ý: file bảo mật `security-algorithm.aar` KHÔNG ở đây — app tiêu thụ
   // (example / apps/mobile) phải đặt vào `app/libs/` (xem README.md).
 }
