@@ -34,13 +34,6 @@ class TuyaMessageModule(reactContext: ReactApplicationContext) :
     )
   }
 
-  // devIds → JSON Tuya: {"allDevIds":bool,"devIds":["id",...]}
-  private fun devIdsJson(allDevices: Boolean, devIds: ReadableArray): String {
-    val ids = (0 until devIds.size()).mapNotNull { devIds.getString(it) }
-      .joinToString(",") { "\"$it\"" }
-    return "{\"allDevIds\":$allDevices,\"devIds\":[$ids]}"
-  }
-
   private fun boolCb(promise: Promise, errCode: String) = object : IThingDataCallback<Boolean> {
     override fun onSuccess(result: Boolean?) = promise.resolve(result ?: false)
     override fun onError(code: String?, message: String?) = promise.reject(code ?: errCode, message)
@@ -95,14 +88,16 @@ class TuyaMessageModule(reactContext: ReactApplicationContext) :
     todo(promise, "setPushStatusByType") // cần PushType enum
 
   // ---------- Do-Not-Disturb ----------
-  override fun getDndStatus(promise: Promise) {
-    ThingHomeSdk.getPushInstance().getDeviceDNDSetting(boolCb(promise, "get_dnd_error"))
-  }
-  override fun setDndStatus(open: Boolean, promise: Promise) {
-    ThingHomeSdk.getPushInstance().setDeviceDNDSetting(open, boolCb(promise, "set_dnd_error"))
-  }
+  // ⚠️ SDK Android 7.5.x: IThingPush KHÔNG có nhóm API DND (getDeviceDNDSetting/setDeviceDNDSetting/
+  //    addDNDWithStartTime/addOnceDNDWithStartTime/modifyDNDWithTimerId/removeDNDWithTimerId).
+  //    Các method này có ở iOS (ThingSmartMessagePush) / bản SDK khác. Trên Android → stub tới khi
+  //    xác định được API DND tương đương (xem docs/research/tuya-android-sdk-missing-modules.md).
+  override fun getDndStatus(promise: Promise) =
+    todo(promise, "getDndStatus (Android IThingPush không có getDeviceDNDSetting)")
+  override fun setDndStatus(open: Boolean, promise: Promise) =
+    todo(promise, "setDndStatus (Android IThingPush không có setDeviceDNDSetting)")
   override fun getDndList(promise: Promise) =
-    todo(promise, "getDndList") // intended: getDNDList(IThingDataCallback<ArrayList<DeviceAlarmNotDisturbVO>>) → map
+    todo(promise, "getDndList")
   override fun getOnceDndList(promise: Promise) =
     todo(promise, "getOnceDndList")
 
@@ -113,15 +108,7 @@ class TuyaMessageModule(reactContext: ReactApplicationContext) :
     allDevices: Boolean,
     devIds: ReadableArray,
     promise: Promise,
-  ) {
-    ThingHomeSdk.getPushInstance().addDNDWithStartTime(
-      startTime, endTime, devIdsJson(allDevices, devIds), loops,
-      object : IThingDataCallback<Long> {
-        override fun onSuccess(result: Long?) = promise.resolve((result ?: 0L).toDouble())
-        override fun onError(code: String?, message: String?) = promise.reject(code ?: "add_dnd_error", message)
-      },
-    )
-  }
+  ) = todo(promise, "addDnd (Android IThingPush không có addDNDWithStartTime)")
 
   override fun addOnceDnd(
     startTime: String,
@@ -129,15 +116,7 @@ class TuyaMessageModule(reactContext: ReactApplicationContext) :
     allDevices: Boolean,
     devIds: ReadableArray,
     promise: Promise,
-  ) {
-    ThingHomeSdk.getPushInstance().addOnceDNDWithStartTime(
-      startTime, endTime, devIdsJson(allDevices, devIds),
-      object : IThingDataCallback<Long> {
-        override fun onSuccess(result: Long?) = promise.resolve((result ?: 0L).toDouble())
-        override fun onError(code: String?, message: String?) = promise.reject(code ?: "add_once_dnd_error", message)
-      },
-    )
-  }
+  ) = todo(promise, "addOnceDnd (Android IThingPush không có addOnceDNDWithStartTime)")
 
   override fun modifyDnd(
     dndId: Double,
@@ -147,14 +126,8 @@ class TuyaMessageModule(reactContext: ReactApplicationContext) :
     allDevices: Boolean,
     devIds: ReadableArray,
     promise: Promise,
-  ) {
-    ThingHomeSdk.getPushInstance().modifyDNDWithTimerId(
-      dndId.toLong(), startTime, endTime, devIdsJson(allDevices, devIds), loops,
-      boolCb(promise, "modify_dnd_error"),
-    )
-  }
+  ) = todo(promise, "modifyDnd (Android IThingPush không có modifyDNDWithTimerId)")
 
-  override fun removeDnd(dndId: Double, promise: Promise) {
-    ThingHomeSdk.getPushInstance().removeDNDWithTimerId(dndId.toLong(), boolCb(promise, "remove_dnd_error"))
-  }
+  override fun removeDnd(dndId: Double, promise: Promise) =
+    todo(promise, "removeDnd (Android IThingPush không có removeDNDWithTimerId)")
 }

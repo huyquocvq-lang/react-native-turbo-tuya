@@ -14,11 +14,11 @@ import com.jimmyvu.turbotuya.NativeTuyaTimerSpec
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReadableArray
+import com.thingclips.smart.android.device.builder.ThingTimerBuilder
+import com.thingclips.smart.android.device.enums.TimerDeviceTypeEnum
 import com.thingclips.smart.home.sdk.ThingHomeSdk
-import com.thingclips.smart.home.sdk.builder.ThingTimerBuilder
+import com.thingclips.smart.home.sdk.constant.TimerUpdateEnum
 import com.thingclips.smart.sdk.api.IResultCallback
-import com.thingclips.smart.sdk.enums.TimerDeviceTypeEnum
-import com.thingclips.smart.sdk.enums.TimerUpdateEnum
 import org.json.JSONObject
 
 // TuyaTimer — hẹn giờ / lịch cloud. Không phát event.
@@ -50,15 +50,16 @@ class TuyaTimerModule(reactContext: ReactApplicationContext) :
     val dps = j.optString("dpsJson", "{}")
     // Best-guess actions: [{ "time": "HH:mm", "dps": {...} }] — đổi theo format thật khi verify.
     val actions = "[{\"time\":\"$time\",\"dps\":$dps}]"
-    return ThingTimerBuilder()
-      .setTaskName(j.optString("taskName"))
-      .setDevId(j.optString("bizId"))
-      .setDeviceType(deviceType(j.optString("bizType", "device")))
-      .setActions(actions)
-      .setLoops(j.optString("loops", "0000000"))
-      .setStatus(if (j.optBoolean("status", true)) 1 else 0)
-      .setIsAppPush(j.optBoolean("appPush", false))
-      .setAliasName(j.optString("aliasName", ""))
+    return ThingTimerBuilder.Builder()
+      .taskName(j.optString("taskName"))
+      .devId(j.optString("bizId"))
+      .deviceType(deviceType(j.optString("bizType", "device")))
+      .actions(actions)
+      .loops(j.optString("loops", "0000000"))
+      .status(if (j.optBoolean("status", true)) 1 else 0)
+      .appPush(j.optBoolean("appPush", false))
+      .aliasName(j.optString("aliasName", ""))
+      .build()
   }
 
   override fun addTimer(inputJson: String, promise: Promise) {

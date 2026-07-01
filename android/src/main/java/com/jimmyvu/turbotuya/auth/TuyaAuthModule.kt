@@ -15,11 +15,11 @@ import com.thingclips.smart.android.user.api.ILogoutCallback
 import com.thingclips.smart.android.user.api.IReNickNameCallback
 import com.thingclips.smart.android.user.api.IRegisterCallback
 import com.thingclips.smart.android.user.api.IResetPasswordCallback
-import com.thingclips.smart.android.user.api.TempUnitEnum
 import com.thingclips.smart.android.user.bean.User
 import com.thingclips.smart.home.sdk.ThingHomeSdk
-import com.thingclips.smart.home.sdk.api.INeedLoginListener
+import com.thingclips.smart.sdk.api.INeedLoginListener
 import com.thingclips.smart.sdk.api.IResultCallback
+import com.thingclips.smart.sdk.enums.TempUnitEnum
 
 // TuyaAuth — đăng ký/đăng nhập email + third-party + session + profile (B3 mở rộng).
 class TuyaAuthModule(reactContext: ReactApplicationContext) :

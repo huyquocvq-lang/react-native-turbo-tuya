@@ -22,7 +22,7 @@ import com.thingclips.smart.home.sdk.callback.IThingGetHomeListCallback
 import com.thingclips.smart.home.sdk.callback.IThingHomeResultCallback
 import com.thingclips.smart.sdk.api.IResultCallback
 import com.thingclips.smart.sdk.bean.DeviceBean
-import com.thingclips.smart.sdk.bean.group.bean.GroupBean
+import com.thingclips.smart.sdk.bean.GroupBean
 
 // TuyaHome — quản lý home (app dùng 1 nhà/user) + weather + listeners. Phát event onHomeChange.
 class TuyaHomeModule(reactContext: ReactApplicationContext) :
@@ -100,7 +100,7 @@ class TuyaHomeModule(reactContext: ReactApplicationContext) :
   ) {
     val roomList = (0 until rooms.size()).mapNotNull { rooms.getString(it) }
     ThingHomeSdk.newHomeInstance(homeId.toLong()).updateHome(
-      name, lon, lat, geoName, roomList,
+      name, lon, lat, geoName, roomList, true,
       object : IResultCallback {
         override fun onSuccess() = promise.resolve(null)
         override fun onError(code: String?, error: String?) =
@@ -119,7 +119,7 @@ class TuyaHomeModule(reactContext: ReactApplicationContext) :
 
   // ---------- Weather ----------
   override fun getHomeWeatherSketch(homeId: Double, lon: Double, lat: Double, promise: Promise) {
-    ThingHomeSdk.getHomeManagerInstance().getHomeWeatherSketch(
+    ThingHomeSdk.newHomeInstance(homeId.toLong()).getHomeWeatherSketch(
       lon, lat,
       object : IIGetHomeWetherSketchCallBack {
         override fun onSuccess(result: WeatherBean?) {

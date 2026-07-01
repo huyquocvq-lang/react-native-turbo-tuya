@@ -39,13 +39,12 @@ class TuyaMemberModule(reactContext: ReactApplicationContext) :
     val m = Arguments.createMap()
     m.putDouble("memberId", bean.memberId.toDouble())
     m.putString("account", bean.account ?: "")
-    m.putString("name", bean.name ?: "")
+    m.putString("name", bean.nickName ?: "")
     m.putBoolean("admin", bean.isAdmin)
     m.putDouble("role", bean.role.toDouble())
-    m.putDouble("status", bean.dealStatus.toDouble())
+    m.putDouble("status", bean.memberStatus.toDouble())
     m.putString("headPic", bean.headPic ?: "")
-    m.putString("mobile", bean.mobile ?: "")
-    m.putString("invitationCode", bean.invitationCode ?: "")
+    m.putString("uid", bean.uid ?: "")
     return m
   }
 
@@ -126,8 +125,10 @@ class TuyaMemberModule(reactContext: ReactApplicationContext) :
   }
 
   override fun joinHomeByCode(code: String, promise: Promise) {
-    ThingHomeSdk.getMemberInstance()
-      .joinHomeByInviteCode(code, result(promise, "join_home_error"))
+    // SDK 7.5.x IThingHomeMember KHÔNG có joinHomeByInviteCode 1-bước. Luồng đúng là 2 bước:
+    // getInvitationFamilyInfo(code, IThingDataCallback) → lấy homeId → processInvitation(homeId, true).
+    // Bean trả về của getInvitationFamilyInfo chưa verbatim → stub để wire khi có bean field thật.
+    todo(promise, "joinHomeByCode", "getInvitationFamilyInfo bean field chưa verbatim (7.5.x bỏ joinHomeByInviteCode)")
   }
 
   override fun processInvitation(homeId: Double, accept: Boolean, promise: Promise) {

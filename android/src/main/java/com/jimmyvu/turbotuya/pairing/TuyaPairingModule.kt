@@ -16,11 +16,10 @@ import com.thingclips.smart.sdk.api.IThingActivator
 import com.thingclips.smart.sdk.api.IThingActivatorGetToken
 import com.thingclips.smart.sdk.api.IThingSmartActivatorListener
 import com.thingclips.smart.sdk.api.IMultiModeActivatorListener
-import com.thingclips.smart.sdk.bean.ActivatorBuilder
+import com.thingclips.smart.home.sdk.builder.ActivatorBuilder
 import com.thingclips.smart.sdk.bean.BleActivatorBean
 import com.thingclips.smart.sdk.bean.DeviceBean
 import com.thingclips.smart.sdk.bean.MultiModeActivatorBean
-import com.thingclips.smart.sdk.bean.PauseStateData
 import com.thingclips.smart.sdk.enums.ActivatorModelEnum
 
 // TuyaPairing — ghép nối Wi-Fi (EZ/AP) + BLE. Phát event onPairingProgress / onBleScan.
@@ -94,7 +93,7 @@ class TuyaPairingModule(reactContext: ReactApplicationContext) :
     promise: Promise,
   ) {
     val model =
-      if (mode.equals("AP", true)) ActivatorModelEnum.TY_AP else ActivatorModelEnum.TY_EZ
+      if (mode.equals("AP", true)) ActivatorModelEnum.THING_AP else ActivatorModelEnum.THING_EZ
     val builder = ActivatorBuilder()
       .setSsid(ssid)
       .setPassword(password)
@@ -221,13 +220,6 @@ class TuyaPairingModule(reactContext: ReactApplicationContext) :
               override fun onSuccess(deviceBean: DeviceBean?) = promise.resolve(deviceToMap(deviceBean))
               override fun onFailure(code: Int, msg: String?, handle: Any?) =
                 promise.reject(code.toString(), msg)
-              override fun onActivatorStatePauseCallback(stateData: PauseStateData?) {
-                // Stage trung gian: 0 activation,1 delegation,2 network,3 cloud activation (PauseStateData getters cần verify).
-                val m = Arguments.createMap()
-                m.putString("step", "combo_stage")
-                m.putString("dataJson", stateData?.toString() ?: "")
-                emit(EVT_PAIRING, m)
-              }
             },
           )
         }

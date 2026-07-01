@@ -11,13 +11,15 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.WritableMap
 import com.facebook.react.modules.core.DeviceEventManagerModule
+import com.thingclips.sdk.device.enums.DevUpgradeStatusEnum
+import com.thingclips.smart.android.device.bean.UpgradeInfoBean
+import com.thingclips.smart.device.bean.ThingDevUpgradeStatusBean
 import com.thingclips.smart.home.sdk.ThingHomeSdk
 import com.thingclips.smart.sdk.api.IDevOTAListener
 import com.thingclips.smart.sdk.api.IGetOtaInfoCallback
 import com.thingclips.smart.sdk.api.IResultCallback
 import com.thingclips.smart.sdk.api.IThingDataCallback
 import com.thingclips.smart.sdk.api.IThingOTAService
-import com.thingclips.smart.sdk.bean.UpgradeInfoBean
 
 // TuyaOta — cập nhật firmware. Phát event onOtaProgress/onOtaStatusChanged/onOtaSuccess/onOtaFailure.
 class TuyaOtaModule(reactContext: ReactApplicationContext) :
@@ -43,30 +45,31 @@ class TuyaOtaModule(reactContext: ReactApplicationContext) :
   private fun otaOf(devId: String): IThingOTAService =
     services.getOrPut(devId) {
       ThingHomeSdk.newOTAServiceInstance(devId).apply {
-        // ⚠️ Chữ ký IDevOTAListener (đặc biệt onStatusChanged) cần verify trên SDK thật.
+        // SDK 7.5.x: IDevOTAListener gộp về 1 callback firmwareUpgradeStatus(ThingDevUpgradeStatusBean);
+        // tự map status enum → các event progress/success/failure cũ (giữ shape JS không đổi).
         registerDevOTAListener(object : IDevOTAListener {
-          override fun onStatusChanged(otaType: Int, status: Int) {
-            emit(EVT_STATUS, evt(devId).apply { putDouble("type", otaType.toDouble()); putDouble("status", status.toDouble()) })
-          }
-          override fun onProgress(otaType: Int, progress: Int) {
-            emit(EVT_PROGRESS, evt(devId).apply { putDouble("type", otaType.toDouble()); putDouble("progress", progress.toDouble()) })
-          }
-          override fun onSuccess(otaType: Int) {
-            emit(EVT_SUCCESS, evt(devId).apply { putDouble("type", otaType.toDouble()) })
-          }
-          override fun onFailure(otaType: Int, code: String?, error: String?) {
-            emit(EVT_FAILURE, evt(devId).apply {
-              putDouble("type", otaType.toDouble())
-              putString("code", code ?: "ota_error")
-              putString("message", error ?: "")
-            })
-          }
-          override fun onTimeout(otaType: Int) {
-            emit(EVT_FAILURE, evt(devId).apply {
-              putDouble("type", otaType.toDouble())
-              putString("code", "timeout")
-              putString("message", "OTA timeout")
-            })
+          override fun firmwareUpgradeStatus(bean: ThingDevUpgradeStatusBean?) {
+            val type = (bean?.firmwareType ?: 0).toDouble()
+            when (bean?.status) {
+              DevUpgradeStatusEnum.UPGRADING, DevUpgradeStatusEnum.DOWNLOADED ->
+                emit(EVT_PROGRESS, evt(devId).apply { putDouble("type", type); putDouble("progress", (bean.progress).toDouble()) })
+              DevUpgradeStatusEnum.SUCCESS ->
+                emit(EVT_SUCCESS, evt(devId).apply { putDouble("type", type) })
+              DevUpgradeStatusEnum.FAILURE ->
+                emit(EVT_FAILURE, evt(devId).apply {
+                  putDouble("type", type)
+                  putString("code", bean.errorCode ?: "ota_error")
+                  putString("message", bean.errorMsg ?: "")
+                })
+              DevUpgradeStatusEnum.TIMEOUT ->
+                emit(EVT_FAILURE, evt(devId).apply {
+                  putDouble("type", type)
+                  putString("code", "timeout")
+                  putString("message", "OTA timeout")
+                })
+              else ->
+                emit(EVT_STATUS, evt(devId).apply { putDouble("type", type); putString("status", bean?.status?.name ?: "") })
+            }
           }
         })
       }
@@ -82,7 +85,7 @@ class TuyaOtaModule(reactContext: ReactApplicationContext) :
         list?.forEach { arr.pushMap(upgradeToMap(it)) }
         promise.resolve(arr)
       }
-      override fun onError(code: String?, error: String?) =
+      override fun onFailure(code: String?, error: String?) =
         promise.reject(code ?: "ota_info_error", error)
     })
   }
@@ -99,7 +102,7 @@ class TuyaOtaModule(reactContext: ReactApplicationContext) :
         service.startFirmwareUpgrade(ArrayList(sel)) // void → kết quả qua IDevOTAListener
         promise.resolve(null)
       }
-      override fun onError(code: String?, error: String?) =
+      override fun onFailure(code: String?, error: String?) =
         promise.reject(code ?: "ota_info_error", error)
     })
   }
@@ -158,9 +161,9 @@ class TuyaOtaModule(reactContext: ReactApplicationContext) :
     m.putString("version", b.version ?: "")
     m.putDouble("upgradeStatus", b.upgradeStatus.toDouble())
     m.putDouble("upgradeType", b.upgradeType.toDouble())
-    m.putString("fileSize", b.fileSize ?: "")
+    m.putDouble("fileSize", b.fileSize.toDouble())
     m.putDouble("controlType", b.controlType.toDouble())
-    m.putBoolean("canUpgrade", b.isCanUpgrade)
+    m.putBoolean("canUpgrade", b.canUpgrade ?: false)
     m.putString("desc", b.desc ?: "")
     return m
   }

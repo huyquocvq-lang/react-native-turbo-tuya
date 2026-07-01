@@ -55,6 +55,13 @@ repositories {
   maven { url "https://maven-other.tuya.com/repository/maven-commercial-releases/" }
 }
 
+// Tuya `thingsmart` kéo theo `thingsmart-modularCampAnno:1.0.0-SNAPSHOT` (chỉ có bản SNAPSHOT,
+// không publish ở maven-releases) → loại trừ ở chính module thư viện để MỌI variant (debug/release,
+// kể cả lint releaseRuntimeClasspath) đều resolve được — theo đúng hướng dẫn tích hợp Tuya.
+configurations.all {
+  exclude group: "com.thingclips.smart", module: "thingsmart-modularCampAnno"
+}
+
 dependencies {
   implementation "com.facebook.react:react-android"
   // Tuya Smart Life App SDK (Wi-Fi + BLE). `api` để app tiêu thụ thấy được.
