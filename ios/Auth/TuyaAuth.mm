@@ -2,7 +2,8 @@
 #import <ThingSmartHomeKit/ThingSmartKit.h>
 
 // TuyaAuth (iOS) — profile/session/reset/cancel/multi-device + email send-code/login/register theo selector
-// (docs/research/tuya-home-sdk-user-account.md). loginWithEmailCode + thirdLogin + bind/getLinked VẪN TODO.
+// (docs/research/tuya-home-sdk-user-account.md). thirdLogin ĐÃ wire (loginByAuth2WithType:, 2026-07-02,
+// docs/research/tuya-ios-third-party-login.md). loginWithEmailCode + bind/getLinked VẪN TODO.
 // ⚠️ loginByEmail/registerByEmail là selector chuẩn Tuya (KHÔNG có verbatim trong note) — verify khi build;
 //    sendVerifyCode dùng ThingSuccessBlock (signature void/id verify trên header).
 static void TuyaTODO(NSString *what, RCTPromiseRejectBlock reject) {
@@ -103,7 +104,25 @@ RCT_EXPORT_MODULE()
               type:(NSString *)type
          extraInfo:(NSString *)extraInfo
            resolve:(RCTPromiseResolveBlock)resolve
-            reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"thirdLogin", reject); }
+            reject:(RCTPromiseRejectBlock)reject {
+  // iOS dùng loginByAuth2WithType: (KHÁC Android `thirdLogin`). type: @"gg" Google (idToken),
+  // @"ap" Apple (identityToken), @"fb" Facebook. extraInfo iOS là NSDictionary → parse JSON string
+  // từ JS: Google {"pubVersion":1}; Apple {userIdentifier,email,nickname,snsNickname}.
+  // Nguồn: docs/research/tuya-ios-third-party-login.md.
+  // ⚠️ Verify khi build: chữ ký `loginByAuth2WithType:...` + kiểu accessToken trong ThingSmartUser.h.
+  NSDictionary *extra = nil;
+  if (extraInfo.length > 0) {
+    NSData *data = [extraInfo dataUsingEncoding:NSUTF8StringEncoding];
+    id parsed = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:nil] : nil;
+    if ([parsed isKindOfClass:[NSDictionary class]]) extra = parsed;
+  }
+  [[ThingSmartUser sharedInstance] loginByAuth2WithType:type
+                                            countryCode:countryCode
+                                            accessToken:token
+                                              extraInfo:extra
+                                                success:^{ resolve(TuyaUserMap([ThingSmartUser sharedInstance])); }
+                                                failure:^(NSError *e) { reject(@"third_login_error", e.localizedDescription, e); }];
+}
 
 // ---------- Session ----------
 - (void)isLoggedIn:(RCTPromiseResolveBlock)resolve
