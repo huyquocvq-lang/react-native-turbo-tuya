@@ -89,6 +89,21 @@ class TuyaHomeModule(reactContext: ReactApplicationContext) :
     )
   }
 
+  // Danh sách thiết bị của home: getHomeDetail → HomeBean.deviceList (DeviceBean) → map cho màn device list.
+  override fun getHomeDeviceList(homeId: Double, promise: Promise) {
+    ThingHomeSdk.newHomeInstance(homeId.toLong()).getHomeDetail(
+      object : IThingHomeResultCallback {
+        override fun onSuccess(bean: HomeBean?) {
+          val arr = Arguments.createArray()
+          bean?.deviceList?.forEach { arr.pushMap(deviceToMap(it)) }
+          promise.resolve(arr)
+        }
+        override fun onError(code: String?, error: String?) =
+          promise.reject(code ?: "home_device_list_error", error)
+      },
+    )
+  }
+
   override fun updateHome(
     homeId: Double,
     name: String,
@@ -230,6 +245,17 @@ class TuyaHomeModule(reactContext: ReactApplicationContext) :
     m.putDouble("lon", bean?.lon ?: 0.0)
     m.putDouble("lat", bean?.lat ?: 0.0)
     m.putString("geoName", bean?.geoName ?: "")
+    return m
+  }
+
+  // DeviceBean → HomeDeviceItem (JS). getIsOnline() = LAN||cloud online.
+  private fun deviceToMap(bean: DeviceBean): WritableMap {
+    val m = Arguments.createMap()
+    m.putString("devId", bean.devId ?: "")
+    m.putString("name", bean.name ?: "")
+    m.putString("productId", bean.productId ?: "")
+    m.putBoolean("isOnline", bean.getIsOnline() ?: false)
+    m.putString("iconUrl", bean.iconUrl ?: "")
     return m
   }
 }

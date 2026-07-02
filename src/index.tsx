@@ -14,7 +14,7 @@ import TuyaMesh from './specs/NativeTuyaMesh';
 
 // --- Re-export type kết quả (khai báo inline trong từng spec do ràng buộc codegen) ---
 export type { UserResult, LoginTerminal } from './specs/NativeTuyaAuth';
-export type { HomeResult, WeatherSketch } from './specs/NativeTuyaHome';
+export type { HomeResult, HomeDeviceItem, WeatherSketch } from './specs/NativeTuyaHome';
 export type { DeviceResult } from './specs/NativeTuyaPairing';
 export type { DeviceSnapshot } from './specs/NativeTuyaDevice';
 export type { UpgradeInfo } from './specs/NativeTuyaOta';
@@ -164,6 +164,7 @@ export const Tuya = {
   createHome: TuyaHome.createHome,
   getHomeList: TuyaHome.getHomeList,
   getHomeDetail: TuyaHome.getHomeDetail,
+  getHomeDeviceList: TuyaHome.getHomeDeviceList,
   updateHome: TuyaHome.updateHome,
   dismissHome: TuyaHome.dismissHome,
   getHomeWeatherSketch: TuyaHome.getHomeWeatherSketch,

@@ -92,6 +92,27 @@ RCT_EXPORT_MODULE()
   } failure:^(NSError *e) { reject(@"home_detail_error", e.localizedDescription, e); }];
 }
 
+// Danh sách thiết bị của home: nạp home data rồi map home.deviceList (ThingSmartDeviceModel).
+- (void)getHomeDeviceList:(double)homeId
+                  resolve:(RCTPromiseResolveBlock)resolve
+                   reject:(RCTPromiseRejectBlock)reject {
+  ThingSmartHome *home = [self homeOf:homeId];
+  if (!home) { reject(@"no_home", @"Không tìm thấy home", nil); return; }
+  [home getHomeDataWithSuccess:^(ThingSmartHomeModel *m) {
+    NSMutableArray *out = [NSMutableArray array];
+    for (ThingSmartDeviceModel *d in home.deviceList) {
+      [out addObject:@{
+        @"devId": d.devId ?: @"",
+        @"name": d.name ?: @"",
+        @"productId": d.productId ?: @"",
+        @"isOnline": @(d.isOnline),
+        @"iconUrl": d.iconUrl ?: @"",
+      }];
+    }
+    resolve(out);
+  } failure:^(NSError *e) { reject(@"home_device_list_error", e.localizedDescription, e); }];
+}
+
 - (void)updateHome:(double)homeId
               name:(NSString *)name
                lon:(double)lon

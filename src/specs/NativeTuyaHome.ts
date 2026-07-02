@@ -13,6 +13,15 @@ export type HomeResult = {
   geoName: string;
 };
 
+// 1 thiết bị thuộc home (map từ DeviceBean/ThingSmartDeviceModel) — đủ dùng cho màn device list.
+export type HomeDeviceItem = {
+  devId: string;
+  name: string;
+  productId: string;
+  isOnline: boolean; // LAN hoặc cloud
+  iconUrl: string;
+};
+
 export type WeatherSketch = {
   condition: string;
   temp: string;
@@ -30,6 +39,8 @@ export interface Spec extends TurboModule {
   ): Promise<HomeResult>;
   getHomeList(): Promise<HomeResult[]>;
   getHomeDetail(homeId: number): Promise<HomeResult>;
+  // Danh sách thiết bị trong home (sau khi nạp home detail) → dùng cho màn device list.
+  getHomeDeviceList(homeId: number): Promise<HomeDeviceItem[]>;
   // Cập nhật tên/vị trí/danh sách phòng của home.
   updateHome(
     homeId: number,
