@@ -172,28 +172,28 @@ export function isRetryable(
   return classify(code, domain).retryable;
 }
 
-/** Human-readable (Vietnamese) description for logs/debug. App UI should use userMessageKey for i18n. */
+/** Human-readable description for logs/debug. App UI should use userMessageKey for i18n. */
 export function describe(
   code: string | number,
   domain: TuyaErrorDomain = 'sdk'
 ): string {
   const info = classify(code, domain);
   const text: Record<TuyaErrorCategory, string> = {
-    not_initialized: 'SDK chưa init — gọi Tuya.initSdk() trước.',
-    not_logged_in: 'Chưa đăng nhập — cần login lại.',
-    invalid_param: 'Tham số không hợp lệ.',
-    token_expired: 'Token hết hạn/không khớp — lấy token mới rồi thử lại.',
-    pairing_failed: 'Ghép nối thất bại.',
-    pairing_timeout: 'Ghép nối quá thời gian — thử lại.',
-    dp_unsupported: 'DP không hỗ trợ hoặc sai kiểu/giá trị.',
-    mqtt: 'Mất kết nối realtime (MQTT) — thử lại.',
-    device_offline: 'Thiết bị offline/không kết nối.',
-    network: 'Lỗi mạng — kiểm tra kết nối rồi thử lại.',
-    ssl_clock: 'Đồng hồ thiết bị/máy sai hoặc lỗi chứng chỉ SSL.',
-    account: 'Lỗi tài khoản (mã OTP/email/mật khẩu...).',
-    illegal_client: 'Sai AppKey/Secret hoặc package/bundleId/SHA-256/Data Center.',
-    permission: 'Không đủ quyền thực hiện.',
-    unknown: 'Lỗi không xác định.',
+    not_initialized: 'SDK not initialized — call Tuya.initSdk() first.',
+    not_logged_in: 'Not signed in — please sign in again.',
+    invalid_param: 'Invalid parameter.',
+    token_expired: 'Token expired or mismatched — get a new token and try again.',
+    pairing_failed: 'Pairing failed.',
+    pairing_timeout: 'Pairing timed out — try again.',
+    dp_unsupported: 'DP not supported or wrong type/value.',
+    mqtt: 'Realtime connection (MQTT) lost — try again.',
+    device_offline: 'Device is offline or unreachable.',
+    network: 'Network error — check your connection and try again.',
+    ssl_clock: 'Device or phone clock is wrong, or SSL certificate error.',
+    account: 'Account error (OTP code, email, or password).',
+    illegal_client: 'Wrong AppKey/Secret or package/bundleId/SHA-256/Data Center.',
+    permission: 'Insufficient permissions.',
+    unknown: 'Unknown error.',
   };
   return `[${info.domain}:${info.code}] ${text[info.category]}`;
 }
