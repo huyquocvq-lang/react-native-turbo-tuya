@@ -11,13 +11,16 @@ package com.jimmyvu.turbotuya.message
 //   getDNDList/getOnceDNDList(IThingDataCallback<ArrayList<DeviceAlarmNotDisturbVO>>)
 
 import com.jimmyvu.turbotuya.NativeTuyaMessageSpec
+import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReadableArray
 import com.thingclips.smart.android.user.api.IBooleanCallback
 import com.thingclips.smart.home.sdk.ThingHomeSdk
+import com.thingclips.smart.home.sdk.bean.MessageHasNew
 import com.thingclips.smart.sdk.api.IResultCallback
 import com.thingclips.smart.sdk.api.IThingDataCallback
+import com.thingclips.smart.sdk.bean.message.MessageListBean
 
 // TuyaMessage — message center + push status + DND. Không phát event.
 class TuyaMessageModule(reactContext: ReactApplicationContext) :
@@ -51,16 +54,79 @@ class TuyaMessageModule(reactContext: ReactApplicationContext) :
   override fun unregisterDevice(promise: Promise) = todo(promise, "unregisterDevice")
 
   // ---------- Message list / detail ----------
-  override fun getMessageList(offset: Double, limit: Double, promise: Promise) =
-    todo(promise, "getMessageList") // intended: getMessageInstance().getMessageList(offset,limit,IThingDataCallback<MessageListBean>) → map
+  // Verbatim SDK 7.5.6 (javap 2026-07-03): IThingMessage.getMessageList(int,int,IThingDataCallback<MessageListBean>);
+  // MessageListBean.getDatas()/getTotalCount(); MessageBean.getId/getMsgType(int)/getMsgSrcId/getMsgContent/
+  // getMsgTypeContent/getDateTime/getIcon/isHasNotRead. msgType int → chuỗi spec: 1 alarm · 2 family · 3 notification.
+  override fun getMessageList(offset: Double, limit: Double, promise: Promise) {
+    val off = offset.toInt()
+    val lim = limit.toInt()
+    ThingHomeSdk.getMessageInstance().getMessageList(
+      off, lim,
+      object : IThingDataCallback<MessageListBean> {
+        override fun onSuccess(result: MessageListBean?) {
+          val datas = result?.datas ?: emptyList()
+          val arr = Arguments.createArray()
+          datas.forEach { m ->
+            arr.pushMap(
+              Arguments.createMap().apply {
+                putString("id", m.id ?: "")
+                putString(
+                  "msgType",
+                  when (m.msgType) {
+                    1 -> "alarm"
+                    2 -> "family"
+                    else -> "notification"
+                  },
+                )
+                putString("msgSrcId", m.msgSrcId ?: "")
+                putString("title", m.msgTypeContent ?: "") // Tuya: msgTypeContent = tiêu đề hiển thị
+                putString("content", m.msgContent ?: "")
+                putString("typeContent", m.msgTypeContent ?: "")
+                putString("icon", m.icon ?: "")
+                putString("dateTime", m.dateTime ?: "")
+                putBoolean("hasNotRead", m.isHasNotRead)
+              },
+            )
+          }
+          val page = Arguments.createMap().apply {
+            putArray("list", arr)
+            putInt("offset", off)
+            putInt("limit", lim)
+            putBoolean("hasMore", off + datas.size < (result?.totalCount ?: 0))
+          }
+          promise.resolve(page)
+        }
+
+        override fun onError(errorCode: String?, errorMessage: String?) =
+          promise.reject(errorCode ?: "get_message_list_error", errorMessage)
+      },
+    )
+  }
   override fun getMessageListByType(type: String, offset: Double, limit: Double, promise: Promise) =
     todo(promise, "getMessageListByType") // cần MessageType enum
   override fun getMessageDetailList(type: String, msgSrcId: String, offset: Double, limit: Double, promise: Promise) =
     todo(promise, "getMessageDetailList") // cần MessageType enum
 
   // ---------- Has-new / read / delete ----------
-  override fun getMessageHasNew(promise: Promise) =
-    todo(promise, "getMessageHasNew") // intended: requestMessageNew(IThingDataCallback<MessageHasNew>) → {alarm,family,notification}
+  // Verbatim SDK 7.5.6 (javap): requestMessageNew(IThingDataCallback<MessageHasNew>); MessageHasNew.isAlarm/isFamily/isNotification.
+  override fun getMessageHasNew(promise: Promise) {
+    ThingHomeSdk.getMessageInstance().requestMessageNew(
+      object : IThingDataCallback<MessageHasNew> {
+        override fun onSuccess(result: MessageHasNew?) {
+          promise.resolve(
+            Arguments.createMap().apply {
+              putBoolean("alarm", result?.isAlarm ?: false)
+              putBoolean("family", result?.isFamily ?: false)
+              putBoolean("notification", result?.isNotification ?: false)
+            },
+          )
+        }
+
+        override fun onError(errorCode: String?, errorMessage: String?) =
+          promise.reject(errorCode ?: "get_message_has_new_error", errorMessage)
+      },
+    )
+  }
   override fun markMessagesRead(type: String, ids: ReadableArray, promise: Promise) {
     // Android general message KHÔNG có markRead công khai (note) → no-op; iOS có readMessageWithReadRequestModel.
     promise.resolve(true)
