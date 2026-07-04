@@ -169,6 +169,4 @@ RCT_EXPORT_MODULE()
   return std::make_shared<facebook::react::NativeTuyaMessageSpecJSI>(params);
 }
 
-+ (NSString *)moduleName { return @"TuyaMessage"; }
-
 @end

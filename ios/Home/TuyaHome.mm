@@ -253,6 +253,4 @@ RCT_EXPORT_MODULE()
   return std::make_shared<facebook::react::NativeTuyaHomeSpecJSI>(params);
 }
 
-+ (NSString *)moduleName { return @"TuyaHome"; }
-
 @end

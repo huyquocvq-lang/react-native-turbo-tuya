@@ -37,6 +37,4 @@ RCT_EXPORT_MODULE()
   return std::make_shared<facebook::react::NativeTuyaCoreSpecJSI>(params);
 }
 
-+ (NSString *)moduleName { return @"TuyaCore"; }
-
 @end

@@ -49,7 +49,7 @@ RCT_EXPORT_MODULE()
   ThingSmartDevice *dev = [ThingSmartDevice deviceWithDeviceId:devId];
   if (!dev) { reject(@"no_device", @"Không tìm thấy thiết bị", nil); return; }
   [dev publishDps:TuyaParseDps(dpsJson)
-          success:^(id result) { resolve(nil); }
+          success:^{ resolve(nil); }
           failure:^(NSError *e) { reject(@"publish_dps_error", e.localizedDescription, e); }];
 }
 
@@ -65,7 +65,7 @@ RCT_EXPORT_MODULE()
   else if ([mode.lowercaseString isEqualToString:@"internet"]) m = ThingDevicePublishModeInternet;
   [dev publishDps:TuyaParseDps(dpsJson)
              mode:m
-          success:^(id result) { resolve(nil); }
+          success:^{ resolve(nil); }
           failure:^(NSError *e) { reject(@"publish_dps_error", e.localizedDescription, e); }];
 }
 
@@ -207,7 +207,5 @@ RCT_EXPORT_MODULE()
 {
   return std::make_shared<facebook::react::NativeTuyaDeviceSpecJSI>(params);
 }
-
-+ (NSString *)moduleName { return @"TuyaDevice"; }
 
 @end

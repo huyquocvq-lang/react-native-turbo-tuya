@@ -4,11 +4,20 @@
 // TuyaScene (iOS) — WIRED: getSceneList + execute/enable/disable/delete (ThingSmartSceneManager + ThingSmartScene).
 // TODO: detail/save/modify + build* condition/action (factory models) + device/city lists — chưa verbatim đủ.
 // Event onSceneChange: iOS không có MQTT listener rõ → no-op (refresh list ở JS). Verbatim: docs/research/tuya-home-sdk-smart-scenes.md.
-// ⚠️ Verify: ThingSmartSceneModel property (ruleGenre/displayColor/coverIcon — chưa map), deleteSceneWithSuccess: selector.
+// ⚠️ Verify: ThingSmartSceneModel property (ruleGenre/displayColor/coverIcon — chưa map).
 static void TuyaTODO(NSString *what, RCTPromiseRejectBlock reject) {
   reject(@"ios_todo",
          [NSString stringWithFormat:@"iOS '%@' chưa wire — xem docs/research/tuya-home-sdk-smart-scenes.md.", what],
          nil);
+}
+
+// ThingSmartScene không có init theo sceneId (đã verify header ThingSmartSceneCoreKit) — chỉ nhận
+// ThingSmartSceneModel, nên dựng model tối thiểu chỉ có sceneId. Call site phải giữ scene sống tới khi
+// callback về (capture vào block) vì instance sở hữu request đang bay (SDK có cancelRequest).
+static ThingSmartScene *TuyaSceneById(NSString *sceneId) {
+  ThingSmartSceneModel *model = [[ThingSmartSceneModel alloc] init];
+  model.sceneId = sceneId;
+  return [ThingSmartScene sceneWithSceneModel:model];
 }
 
 @implementation TuyaScene
@@ -61,9 +70,10 @@ RCT_EXPORT_MODULE()
             sceneId:(NSString *)sceneId
             resolve:(RCTPromiseResolveBlock)resolve
              reject:(RCTPromiseRejectBlock)reject {
-  ThingSmartScene *scene = [ThingSmartScene sceneWithSceneId:sceneId];
-  [scene deleteSceneWithSuccess:^{ resolve(nil); }
-                        failure:^(NSError *e) { reject(@"delete_scene_error", e.localizedDescription, e); }];
+  ThingSmartScene *scene = TuyaSceneById(sceneId);
+  [scene deleteSceneWithHomeId:(long long)homeId
+                       success:^(BOOL result) { (void)scene; resolve(nil); }
+                       failure:^(NSError *e) { reject(@"delete_scene_error", e.localizedDescription, e); }];
 }
 
 // ---------- Execute / automation ----------
@@ -71,24 +81,24 @@ RCT_EXPORT_MODULE()
              sceneId:(NSString *)sceneId
              resolve:(RCTPromiseResolveBlock)resolve
               reject:(RCTPromiseRejectBlock)reject {
-  ThingSmartScene *scene = [ThingSmartScene sceneWithSceneId:sceneId];
-  [scene executeSceneWithSuccess:^{ resolve(nil); }
+  ThingSmartScene *scene = TuyaSceneById(sceneId);
+  [scene executeSceneWithSuccess:^{ (void)scene; resolve(nil); }
                          failure:^(NSError *e) { reject(@"execute_scene_error", e.localizedDescription, e); }];
 }
 
 - (void)enableAutomation:(NSString *)sceneId
                  resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject {
-  ThingSmartScene *scene = [ThingSmartScene sceneWithSceneId:sceneId];
-  [scene enableSceneWithSuccess:^{ resolve(nil); }
+  ThingSmartScene *scene = TuyaSceneById(sceneId);
+  [scene enableSceneWithSuccess:^{ (void)scene; resolve(nil); }
                         failure:^(NSError *e) { reject(@"enable_scene_error", e.localizedDescription, e); }];
 }
 
 - (void)disableAutomation:(NSString *)sceneId
                   resolve:(RCTPromiseResolveBlock)resolve
                    reject:(RCTPromiseRejectBlock)reject {
-  ThingSmartScene *scene = [ThingSmartScene sceneWithSceneId:sceneId];
-  [scene disableSceneWithSuccess:^{ resolve(nil); }
+  ThingSmartScene *scene = TuyaSceneById(sceneId);
+  [scene disableSceneWithSuccess:^{ (void)scene; resolve(nil); }
                          failure:^(NSError *e) { reject(@"disable_scene_error", e.localizedDescription, e); }];
 }
 
@@ -184,7 +194,5 @@ RCT_EXPORT_MODULE()
 {
   return std::make_shared<facebook::react::NativeTuyaSceneSpecJSI>(params);
 }
-
-+ (NSString *)moduleName { return @"TuyaScene"; }
 
 @end

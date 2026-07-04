@@ -4,8 +4,10 @@
 
 // TuyaMesh (iOS) — WIRED best-effort theo verbatim docs/research/tuya-home-sdk-matter-mesh-ios.md (§B SIG, §C Tuya).
 // Tách 2 manager theo meshType: 'sig' → ThingSmartSIGMeshManager · 'tuya' → ThingBLEMeshManager.
-// ⚠️ Cần verify trên thiết bị mesh thật: property model (meshId/mac), ttl SIG, name/pwd cho Tuya startScan,
+// ⚠️ Cần verify trên thiết bị mesh thật: name/pwd cho Tuya startScan,
 //    SIG DP control (note nói publishDps trên device — ở đây dùng publishNodeId trên mesh instance cho cả 2; verify).
+// ThingBleMeshDeviceModel.mac là uint32_t (đã verify header) → key dict + "mac" emit ra JS dùng chuỗi decimal,
+//    JS truyền lại đúng chuỗi đó vào activateSubDevice nên round-trip khớp.
 static void TuyaTODO(NSString *what, RCTPromiseRejectBlock reject) {
   reject(@"ios_todo",
          [NSString stringWithFormat:@"iOS '%@' chưa wire — xem docs/research/tuya-home-sdk-matter-mesh-ios.md.", what],
@@ -95,12 +97,12 @@ static BOOL TuyaIsSig(NSString *meshType) { return [meshType.lowercaseString isE
                meshType:(NSString *)meshType
           searchTimeSec:(double)searchTimeSec {
   if (TuyaIsSig(meshType)) {
-    // SIG: tìm model theo meshId rồi init manager (ttl mặc định 7 — ⚠️ verify).
+    // SIG: tìm model theo meshId rồi init manager qua ThingSmartBleMesh (+SIGMesh) — ttl mặc định 8 theo doc header.
     ThingSmartHome *home = [ThingSmartHome homeWithHomeId:(long long)homeId];
     [home getSIGMeshListWithSuccess:^(NSArray<ThingSmartBleMeshModel *> *list) {
       for (ThingSmartBleMeshModel *m in list) {
         if ([m.meshId isEqualToString:meshId]) {
-          self.sigManager = [ThingSmartSIGMeshManager initSIGMeshManager:m ttl:7 nodeIds:nil];
+          self.sigManager = [ThingSmartBleMesh initSIGMeshManager:m ttl:8 nodeIds:nil];
           self.sigManager.delegate = self;
           break;
         }
@@ -203,8 +205,9 @@ static BOOL TuyaIsSig(NSString *meshType) { return [meshType.lowercaseString isE
 
 // ---------- Tuya delegate ----------
 - (void)bleMeshManager:(ThingBLEMeshManager *)manager didScanedDevice:(ThingBleMeshDeviceModel *)device {
-  if (device.mac) { self.tuyaScanned[device.mac] = device; }
-  [self emit:@"onMeshDeviceFound" body:@{ @"dataJson": TuyaMeshJson(@{ @"mac": device.mac ?: @"" }) }];
+  NSString *macKey = [NSString stringWithFormat:@"%u", device.mac];
+  if (device.mac) { self.tuyaScanned[macKey] = device; }
+  [self emit:@"onMeshDeviceFound" body:@{ @"dataJson": TuyaMeshJson(@{ @"mac": macKey }) }];
 }
 
 - (void)activeDeviceSuccessWithName:(NSString *)name deviceId:(NSString *)deviceId error:(NSError *)error {
@@ -221,7 +224,5 @@ static BOOL TuyaIsSig(NSString *meshType) { return [meshType.lowercaseString isE
 {
   return std::make_shared<facebook::react::NativeTuyaMeshSpecJSI>(params);
 }
-
-+ (NSString *)moduleName { return @"TuyaMesh"; }
 
 @end

@@ -4,7 +4,8 @@
 // TuyaTimer (iOS) — WIRED: getTimerList + removeTimer (ThingSmartTimer, key theo task/bizId/bizType).
 // Verbatim: docs/research/tuya-home-sdk-device-control.md (ThingSmartTimer header).
 // TODO: addTimer/updateTimer/updateTimerStatus — chữ ký đầy đủ (time/dps/status/isAppPush) + map inputJson cần verify.
-// ⚠️ Verify: ThingSmartTimer sharedInstance + property ThingTimerModel (timerId/time/loops/status/dps/aliasName);
+// ThingSmartTimer KHÔNG có sharedInstance (đã verify header ThingSmartTimerKit) — alloc/init và giữ
+// strong ref trong property để request async không bị dealloc/cancel giữa chừng.
 //    removeTimerWithTask xoá theo task (KHÔNG theo timerIds — iOS không expose per-id verbatim).
 static void TuyaTODO(NSString *what, RCTPromiseRejectBlock reject) {
   reject(@"ios_todo",
@@ -19,9 +20,18 @@ static NSString *TuyaJsonStr(id obj) {
   return d ? [[NSString alloc] initWithData:d encoding:NSUTF8StringEncoding] : @"{}";
 }
 
+@interface TuyaTimer ()
+@property (nonatomic, strong) ThingSmartTimer *timer;
+@end
+
 @implementation TuyaTimer
 
 RCT_EXPORT_MODULE()
+
+- (ThingSmartTimer *)timer {
+  if (!_timer) { _timer = [[ThingSmartTimer alloc] init]; }
+  return _timer;
+}
 
 - (void)addTimer:(NSString *)inputJson
          resolve:(RCTPromiseResolveBlock)resolve
@@ -39,11 +49,11 @@ RCT_EXPORT_MODULE()
             resolve:(RCTPromiseResolveBlock)resolve
              reject:(RCTPromiseRejectBlock)reject {
   // timerIds bỏ qua trên iOS — removeTimerWithTask xoá toàn bộ timer của task/bizId/bizType.
-  [[ThingSmartTimer sharedInstance] removeTimerWithTask:taskName
-                                                  bizId:bizId
-                                                bizType:(NSUInteger)bizType.integerValue
-                                                success:^{ resolve(nil); }
-                                                failure:^(NSError *e) { reject(@"remove_timer_error", e.localizedDescription, e); }];
+  [self.timer removeTimerWithTask:taskName
+                            bizId:bizId
+                          bizType:(NSUInteger)bizType.integerValue
+                          success:^{ resolve(nil); }
+                          failure:^(NSError *e) { reject(@"remove_timer_error", e.localizedDescription, e); }];
 }
 
 - (void)getTimerList:(NSString *)taskName
@@ -51,10 +61,10 @@ RCT_EXPORT_MODULE()
              bizType:(NSString *)bizType
              resolve:(RCTPromiseResolveBlock)resolve
               reject:(RCTPromiseRejectBlock)reject {
-  [[ThingSmartTimer sharedInstance] getTimerListWithTask:taskName
-                                                   bizId:bizId
-                                                 bizType:(NSUInteger)bizType.integerValue
-                                                 success:^(NSArray<ThingTimerModel *> *list) {
+  [self.timer getTimerListWithTask:taskName
+                             bizId:bizId
+                           bizType:(NSUInteger)bizType.integerValue
+                           success:^(NSArray<ThingTimerModel *> *list) {
     NSMutableArray *out = [NSMutableArray array];
     for (ThingTimerModel *t in list) {
       [out addObject:@{
@@ -84,7 +94,5 @@ RCT_EXPORT_MODULE()
 {
   return std::make_shared<facebook::react::NativeTuyaTimerSpecJSI>(params);
 }
-
-+ (NSString *)moduleName { return @"TuyaTimer"; }
 
 @end

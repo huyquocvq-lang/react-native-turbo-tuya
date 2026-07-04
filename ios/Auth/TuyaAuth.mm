@@ -194,8 +194,8 @@ RCT_EXPORT_MODULE()
                newPassword:(NSString *)newPassword
                    resolve:(RCTPromiseResolveBlock)resolve
                     reject:(RCTPromiseRejectBlock)reject {
-  // iOS reset email không cần countryCode.
-  [[ThingSmartUser sharedInstance] resetPasswordByEmail:email
+  [[ThingSmartUser sharedInstance] resetPasswordByEmail:countryCode
+                                                  email:email
                                             newPassword:newPassword
                                                    code:code
                                                 success:^{ resolve(nil); }
@@ -265,7 +265,5 @@ RCT_EXPORT_MODULE()
 {
   return std::make_shared<facebook::react::NativeTuyaAuthSpecJSI>(params);
 }
-
-+ (NSString *)moduleName { return @"TuyaAuth"; }
 
 @end

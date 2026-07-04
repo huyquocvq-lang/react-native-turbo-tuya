@@ -131,6 +131,4 @@ RCT_EXPORT_MODULE()
   return std::make_shared<facebook::react::NativeTuyaOtaSpecJSI>(params);
 }
 
-+ (NSString *)moduleName { return @"TuyaOta"; }
-
 @end

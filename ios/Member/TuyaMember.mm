@@ -1,11 +1,12 @@
 #import "TuyaMember.h"
 #import <ThingSmartHomeKit/ThingSmartKit.h>
 
-// TuyaMember (iOS) — WIRED: queryMembers (getHomeMemberListWithSuccess:) + removeMember (removeHomeMemberWithMemberId:)
-// + processInvitation (joinFamilyWithAccept:) + transferHomeOwner (transferHomeWithMemberId:). Verbatim:
-// docs/research/tuya-home-sdk-home-management.md (section C iOS).
+// TuyaMember (iOS) — WIRED: queryMembers (getHomeMemberListWithSuccess:) + removeMember + transferHomeOwner
+// (2 cái sau nằm trên class ThingSmartHomeMember, KHÔNG phải ThingSmartHome — đã verify header ThingSmartDeviceKit)
+// + processInvitation (joinFamilyWithAccept: — trên ThingSmartHome). Verbatim: docs/research/tuya-home-sdk-home-management.md.
 // TODO: addMember/updateMember (request model field chưa verbatim), invitation create/list/cancel/updateInvited/joinByCode (Biz).
-// ⚠️ Verify: property ThingSmartHomeMemberModel (memberId/account/name/admin/role/dealStatus/headPic/invitationCode).
+// Model đã verify header: có memberId/userName/name/role/dealStatus/headPic/mobile; KHÔNG có account/invitationCode,
+// isAdmin deprecated → suy "admin" từ role (Member=0 < Admin=1 < Owner=2).
 static void TuyaTODO(NSString *what, RCTPromiseRejectBlock reject) {
   reject(@"ios_todo",
          [NSString stringWithFormat:@"iOS '%@' chưa wire — xem docs/research/tuya-home-sdk-home-management.md.", what],
@@ -15,20 +16,29 @@ static void TuyaTODO(NSString *what, RCTPromiseRejectBlock reject) {
 static NSDictionary *TuyaMemberMap(ThingSmartHomeMemberModel *m) {
   return @{
     @"memberId": @(m.memberId),
-    @"account": m.account ?: @"",
+    @"account": m.userName ?: @"",
     @"name": m.name ?: @"",
-    @"admin": @(m.admin),
+    @"admin": @(m.role >= ThingHomeRoleType_Admin),
     @"role": @(m.role),
     @"status": @(m.dealStatus),
     @"headPic": m.headPic ?: @"",
-    @"mobile": @"",
-    @"invitationCode": m.invitationCode ?: @"",
+    @"mobile": m.mobile ?: @"",
+    @"invitationCode": @"",
   };
 }
+
+@interface TuyaMember ()
+@property (nonatomic, strong) ThingSmartHomeMember *homeMember;
+@end
 
 @implementation TuyaMember
 
 RCT_EXPORT_MODULE()
+
+- (ThingSmartHomeMember *)homeMember {
+  if (!_homeMember) { _homeMember = [[ThingSmartHomeMember alloc] init]; }
+  return _homeMember;
+}
 
 - (ThingSmartHome *)homeOf:(double)homeId {
   return [ThingSmartHome homeWithHomeId:(long long)homeId];
@@ -68,11 +78,10 @@ RCT_EXPORT_MODULE()
             memberId:(double)memberId
              resolve:(RCTPromiseResolveBlock)resolve
               reject:(RCTPromiseRejectBlock)reject {
-  ThingSmartHome *home = [self homeOf:homeId];
-  if (!home) { reject(@"no_home", @"Không tìm thấy home", nil); return; }
-  [home removeHomeMemberWithMemberId:(long long)memberId
-                             success:^{ resolve(nil); }
-                             failure:^(NSError *e) { reject(@"remove_member_error", e.localizedDescription, e); }];
+  // API iOS chỉ cần memberId (homeId từ JS không dùng — member id là global).
+  [self.homeMember removeHomeMemberWithMemberId:(long long)memberId
+                                        success:^{ resolve(nil); }
+                                        failure:^(NSError *e) { reject(@"remove_member_error", e.localizedDescription, e); }];
 }
 
 // ---------- Invitation ----------
@@ -114,11 +123,10 @@ RCT_EXPORT_MODULE()
                  memberId:(double)memberId
                   resolve:(RCTPromiseResolveBlock)resolve
                    reject:(RCTPromiseRejectBlock)reject {
-  ThingSmartHome *home = [self homeOf:homeId];
-  if (!home) { reject(@"no_home", @"Không tìm thấy home", nil); return; }
-  [home transferHomeWithMemberId:(long long)memberId
-                         success:^{ resolve(nil); }
-                         failure:^(NSError *e) { reject(@"transfer_owner_error", e.localizedDescription, e); }];
+  // API iOS chỉ cần memberId (homeId từ JS không dùng — member id là global).
+  [self.homeMember transferHomeWithMemberId:(long long)memberId
+                                    success:^{ resolve(nil); }
+                                    failure:^(NSError *e) { reject(@"transfer_owner_error", e.localizedDescription, e); }];
 }
 
 // ---------- TurboModule boilerplate ----------
@@ -127,7 +135,5 @@ RCT_EXPORT_MODULE()
 {
   return std::make_shared<facebook::react::NativeTuyaMemberSpecJSI>(params);
 }
-
-+ (NSString *)moduleName { return @"TuyaMember"; }
 
 @end

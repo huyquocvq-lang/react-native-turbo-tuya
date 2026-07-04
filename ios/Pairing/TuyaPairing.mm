@@ -5,7 +5,9 @@
 // TuyaPairing (iOS) — WIRED: token + Wi-Fi EZ/AP (ThingSmartActivator delegate) + BLE scan/pair (ThingSmartBLEManager)
 // + combo BLE+Wi-Fi (ThingSmartBLEWifiActivator) + auto-token. Verbatim: docs/research/tuya-home-sdk-device-pairing.md
 // + tuya-home-sdk-bluetooth.md. P3 advanced (sub-device/gateway/QR/wired/destroyActivator) giữ TODO.
-// ⚠️ Verify enum: ThingActivatorModeEZ/AP, ThingBLEScanTypeSingle; tên delegate combo didReceiveBLEWifiConfigDevice:error:.
+// Đã verify header: ThingActivatorModeEZ/AP ✓; scan type = ThingBLEScanTypeNoraml (typo nguyên văn của SDK);
+// combo dùng property bleWifiDelegate + callback bleWifiActivator:didReceiveBLEWifiConfigDevice:error: ✓;
+// failure của activeBLE/startConfigBLEWifi là ThingFailureHandler (block rỗng — SDK không trả NSError).
 static void TuyaTODO(NSString *what, RCTPromiseRejectBlock reject) {
   reject(@"ios_todo",
          [NSString stringWithFormat:@"iOS '%@' chưa wire — xem docs/research/tuya-home-sdk-device-pairing.md.", what],
@@ -119,7 +121,7 @@ RCT_EXPORT_MODULE()
 // ---------- BLE scan ----------
 - (void)startBleScan:(double)timeoutSec {
   [ThingSmartBLEManager sharedInstance].delegate = self;
-  [[ThingSmartBLEManager sharedInstance] startListeningWithType:ThingBLEScanTypeSingle cacheStatu:YES];
+  [[ThingSmartBLEManager sharedInstance] startListeningWithType:ThingBLEScanTypeNoraml cacheStatu:YES];
 }
 
 - (void)stopBleScan {
@@ -153,7 +155,7 @@ RCT_EXPORT_MODULE()
   [[ThingSmartBLEManager sharedInstance] activeBLE:adv
                                             homeId:(long long)homeId
                                            success:^(ThingSmartDeviceModel *m) { resolve(TuyaPairResult(m)); }
-                                           failure:^(NSError *e) { reject(@"ble_pairing_error", e.localizedDescription, e); }];
+                                           failure:^{ reject(@"ble_pairing_error", @"Ghép nối BLE thất bại (SDK không trả chi tiết lỗi).", nil); }];
 }
 
 // ---------- Combo BLE+Wi-Fi (kết quả qua delegate) ----------
@@ -169,7 +171,7 @@ RCT_EXPORT_MODULE()
   self.comboResolve = resolve;
   self.comboReject = reject;
   if (!self.comboActivator) { self.comboActivator = [[ThingSmartBLEWifiActivator alloc] init]; }
-  self.comboActivator.delegate = self;
+  self.comboActivator.bleWifiDelegate = self;
   [self.comboActivator startConfigBLEWifiDeviceWithUUID:uuid
                                                  homeId:(long long)homeId
                                               productId:(adv.productId ?: @"")
@@ -177,20 +179,20 @@ RCT_EXPORT_MODULE()
                                                password:password
                                                 timeout:timeoutSec
                                                 success:^{ /* device về qua delegate */ }
-                                                failure:^(NSError *e) {
-    if (self.comboReject) self.comboReject(@"combo_pairing_error", e.localizedDescription, e);
+                                                failure:^{
+    if (self.comboReject) self.comboReject(@"combo_pairing_error", @"Ghép nối BLE+Wi-Fi thất bại (SDK không trả chi tiết lỗi).", nil);
     self.comboResolve = nil; self.comboReject = nil;
   }];
 }
 
 - (void)stopBleWifiPairing:(NSString *)uuid {
   // ThingSmartBLEWifiActivator không expose stop verbatim — gỡ delegate để bỏ callback.
-  self.comboActivator.delegate = nil;
+  self.comboActivator.bleWifiDelegate = nil;
   self.comboResolve = nil;
   self.comboReject = nil;
 }
 
-// ThingSmartBLEWifiActivatorDelegate (⚠️ tên method verify)
+// ThingSmartBLEWifiActivatorDelegate (tên method đã verify khớp header nguyên văn)
 - (void)bleWifiActivator:(ThingSmartBLEWifiActivator *)activator
    didReceiveBLEWifiConfigDevice:(ThingSmartDeviceModel *)deviceModel
                            error:(NSError *)error {
@@ -230,14 +232,14 @@ RCT_EXPORT_MODULE()
 - (void)destroyActivator {
   [[ThingSmartActivator sharedInstance] stopConfigWiFi];
   [ThingSmartActivator sharedInstance].delegate = nil;
-  self.comboActivator.delegate = nil;
+  self.comboActivator.bleWifiDelegate = nil;
   self.comboActivator = nil;
   [self.scanned removeAllObjects];
 }
 
 - (void)dealloc {
   [ThingSmartActivator sharedInstance].delegate = nil;
-  _comboActivator.delegate = nil;
+  _comboActivator.bleWifiDelegate = nil;
 }
 
 // addListener:/removeListeners: kế thừa từ RCTEventEmitter (TuyaEventEmitter) — không khai lại.
@@ -248,7 +250,5 @@ RCT_EXPORT_MODULE()
 {
   return std::make_shared<facebook::react::NativeTuyaPairingSpecJSI>(params);
 }
-
-+ (NSString *)moduleName { return @"TuyaPairing"; }
 
 @end
