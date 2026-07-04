@@ -73,6 +73,13 @@ export interface Spec extends TurboModule {
   updateTimeZone(timezoneId: string): Promise<void>;
   updateAvatarByUrl(imageUrl: string): Promise<void>;
 
+  // Login identity: email/phone bind or change via OTP.
+  sendBindEmailCode(countryCode: string, email: string): Promise<void>;
+  sendBindPhoneCode(countryCode: string, phone: string): Promise<void>;
+  bindEmail(countryCode: string, email: string, code: string, sessionId: string): Promise<void>;
+  bindMobile(countryCode: string, phone: string, code: string): Promise<void>;
+  changeUserName(countryCode: string, code: string, sessionId: string, userName: string): Promise<void>;
+
   // Reset password qua OTP (không có changePassword khi đang login).
   resetEmailPassword(
     countryCode: string,

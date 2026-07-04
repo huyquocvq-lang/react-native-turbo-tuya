@@ -187,6 +187,72 @@ RCT_EXPORT_MODULE()
   TuyaTODO(@"updateAvatarByUrl (deprecated)", reject);
 }
 
+// ---------- Login identity: bind/change email or phone via OTP ----------
+- (void)sendBindEmailCode:(NSString *)countryCode
+                    email:(NSString *)email
+                  resolve:(RCTPromiseResolveBlock)resolve
+                   reject:(RCTPromiseRejectBlock)reject {
+  [[ThingSmartUser sharedInstance] sendVerifyCodeWithUserName:email
+                                                       region:nil
+                                                  countryCode:countryCode
+                                                         type:2
+                                                      success:^{ resolve(nil); }
+                                                      failure:^(NSError *e) { reject(@"send_bind_email_code_error", e.localizedDescription, e); }];
+}
+
+- (void)sendBindPhoneCode:(NSString *)countryCode
+                    phone:(NSString *)phone
+                  resolve:(RCTPromiseResolveBlock)resolve
+                   reject:(RCTPromiseRejectBlock)reject {
+  [[ThingSmartUser sharedInstance] sendVerifyCodeWithUserName:phone
+                                                       region:nil
+                                                  countryCode:countryCode
+                                                         type:2
+                                                      success:^{ resolve(nil); }
+                                                      failure:^(NSError *e) { reject(@"send_bind_phone_code_error", e.localizedDescription, e); }];
+}
+
+- (void)bindEmail:(NSString *)countryCode
+            email:(NSString *)email
+             code:(NSString *)code
+        sessionId:(NSString *)sessionId
+          resolve:(RCTPromiseResolveBlock)resolve
+           reject:(RCTPromiseRejectBlock)reject {
+  [[ThingSmartUser sharedInstance] bindEmail:email
+                             withCountryCode:countryCode
+                                        code:code
+                                         sId:sessionId
+                                     success:^{ resolve(nil); }
+                                     failure:^(NSError *e) { reject(@"bind_email_error", e.localizedDescription, e); }];
+}
+
+- (void)bindMobile:(NSString *)countryCode
+             phone:(NSString *)phone
+              code:(NSString *)code
+           resolve:(RCTPromiseResolveBlock)resolve
+            reject:(RCTPromiseRejectBlock)reject {
+  // iOS docs expose `changBindAccount` for the bound email/phone account. No separate bindMobile
+  // selector is documented in the local SDK note, so phone binding/change uses this account path.
+  [[ThingSmartUser sharedInstance] changBindAccount:phone
+                                       countryCode:countryCode
+                                              code:code
+                                           success:^{ resolve(nil); }
+                                           failure:^(NSError *e) { reject(@"bind_mobile_error", e.localizedDescription, e); }];
+}
+
+- (void)changeUserName:(NSString *)countryCode
+                  code:(NSString *)code
+             sessionId:(NSString *)sessionId
+              userName:(NSString *)userName
+               resolve:(RCTPromiseResolveBlock)resolve
+                reject:(RCTPromiseRejectBlock)reject {
+  [[ThingSmartUser sharedInstance] changBindAccount:userName
+                                       countryCode:countryCode
+                                              code:code
+                                           success:^{ resolve(nil); }
+                                           failure:^(NSError *e) { reject(@"change_username_error", e.localizedDescription, e); }];
+}
+
 // ---------- Reset password (OTP) ----------
 - (void)resetEmailPassword:(NSString *)countryCode
                      email:(NSString *)email

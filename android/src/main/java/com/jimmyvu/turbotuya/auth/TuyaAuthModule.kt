@@ -194,6 +194,74 @@ class TuyaAuthModule(reactContext: ReactApplicationContext) :
     todo(promise, "updateAvatarByUrl (deprecated)")
   }
 
+  // ---------- Login identity: bind/change email or phone via OTP ----------
+  override fun sendBindEmailCode(countryCode: String, email: String, promise: Promise) {
+    ThingHomeSdk.getUserInstance().sendBindVerifyCodeWithEmail(
+      countryCode, email,
+      object : IResultCallback {
+        override fun onSuccess() = promise.resolve(null)
+        override fun onError(code: String?, error: String?) =
+          promise.reject(code ?: "send_bind_email_code_error", error)
+      },
+    )
+  }
+
+  override fun sendBindPhoneCode(countryCode: String, phone: String, promise: Promise) {
+    ThingHomeSdk.getUserInstance().sendBindVerifyCode(
+      countryCode, phone,
+      object : IResultCallback {
+        override fun onSuccess() = promise.resolve(null)
+        override fun onError(code: String?, error: String?) =
+          promise.reject(code ?: "send_bind_phone_code_error", error)
+      },
+    )
+  }
+
+  override fun bindEmail(
+    countryCode: String,
+    email: String,
+    code: String,
+    sessionId: String,
+    promise: Promise,
+  ) {
+    ThingHomeSdk.getUserInstance().bindEmail(
+      countryCode, email, code, sessionId,
+      object : IResultCallback {
+        override fun onSuccess() = promise.resolve(null)
+        override fun onError(code: String?, error: String?) =
+          promise.reject(code ?: "bind_email_error", error)
+      },
+    )
+  }
+
+  override fun bindMobile(countryCode: String, phone: String, code: String, promise: Promise) {
+    ThingHomeSdk.getUserInstance().bindMobile(
+      countryCode, phone, code,
+      object : IResultCallback {
+        override fun onSuccess() = promise.resolve(null)
+        override fun onError(code: String?, error: String?) =
+          promise.reject(code ?: "bind_mobile_error", error)
+      },
+    )
+  }
+
+  override fun changeUserName(
+    countryCode: String,
+    code: String,
+    sessionId: String,
+    userName: String,
+    promise: Promise,
+  ) {
+    ThingHomeSdk.getUserInstance().changeUserName(
+      countryCode, code, sessionId, userName,
+      object : IResultCallback {
+        override fun onSuccess() = promise.resolve(null)
+        override fun onError(code: String?, error: String?) =
+          promise.reject(code ?: "change_username_error", error)
+      },
+    )
+  }
+
   // ---------- Reset password (OTP) ----------
   override fun resetEmailPassword(
     countryCode: String,
