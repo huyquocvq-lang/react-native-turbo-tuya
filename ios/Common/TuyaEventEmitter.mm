@@ -1,6 +1,6 @@
 #import "TuyaEventEmitter.h"
 
-// Lớp cơ sở trừu tượng — KHÔNG RCT_EXPORT_MODULE (chỉ subclass cụ thể mới đăng ký).
+// Lớp cơ sở trừu tượng - KHÔNG RCT_EXPORT_MODULE (chỉ subclass cụ thể mới đăng ký).
 @implementation TuyaEventEmitter {
   BOOL _hasListeners;
 }

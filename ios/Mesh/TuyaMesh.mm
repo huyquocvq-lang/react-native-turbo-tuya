@@ -2,15 +2,15 @@
 #import <ThingSmartHomeKit/ThingSmartKit.h>
 // ⚠️ Nếu thiếu symbol mesh: thêm #import <ThingSmartBLEMeshKit/...> (SIG/Tuya mesh manager).
 
-// TuyaMesh (iOS) — WIRED best-effort theo verbatim docs/research/tuya-home-sdk-matter-mesh-ios.md (§B SIG, §C Tuya).
+// TuyaMesh (iOS) - WIRED best-effort theo verbatim docs/research/tuya-home-sdk-matter-mesh-ios.md (§B SIG, §C Tuya).
 // Tách 2 manager theo meshType: 'sig' → ThingSmartSIGMeshManager · 'tuya' → ThingBLEMeshManager.
 // ⚠️ Cần verify trên thiết bị mesh thật: name/pwd cho Tuya startScan,
-//    SIG DP control (note nói publishDps trên device — ở đây dùng publishNodeId trên mesh instance cho cả 2; verify).
+//    SIG DP control (note nói publishDps trên device - ở đây dùng publishNodeId trên mesh instance cho cả 2; verify).
 // ThingBleMeshDeviceModel.mac là uint32_t (đã verify header) → key dict + "mac" emit ra JS dùng chuỗi decimal,
 //    JS truyền lại đúng chuỗi đó vào activateSubDevice nên round-trip khớp.
 static void TuyaTODO(NSString *what, RCTPromiseRejectBlock reject) {
   reject(@"ios_todo",
-         [NSString stringWithFormat:@"iOS '%@' chưa wire — xem docs/research/tuya-home-sdk-matter-mesh-ios.md.", what],
+         [NSString stringWithFormat:@"iOS '%@' chưa wire - xem docs/research/tuya-home-sdk-matter-mesh-ios.md.", what],
          nil);
 }
 
@@ -97,7 +97,7 @@ static BOOL TuyaIsSig(NSString *meshType) { return [meshType.lowercaseString isE
                meshType:(NSString *)meshType
           searchTimeSec:(double)searchTimeSec {
   if (TuyaIsSig(meshType)) {
-    // SIG: tìm model theo meshId rồi init manager qua ThingSmartBleMesh (+SIGMesh) — ttl mặc định 8 theo doc header.
+    // SIG: tìm model theo meshId rồi init manager qua ThingSmartBleMesh (+SIGMesh) - ttl mặc định 8 theo doc header.
     ThingSmartHome *home = [ThingSmartHome homeWithHomeId:(long long)homeId];
     [home getSIGMeshListWithSuccess:^(NSArray<ThingSmartBleMeshModel *> *list) {
       for (ThingSmartBleMeshModel *m in list) {
@@ -143,11 +143,11 @@ static BOOL TuyaIsSig(NSString *meshType) { return [meshType.lowercaseString isE
   self.activateReject = reject;
   if (TuyaIsSig(meshType)) {
     ThingSmartSIGMeshDiscoverDeviceInfo *info = self.sigScanned[mac];
-    if (!info) { reject(@"mesh_scan_required", @"Chưa scan thấy mac — gọi searchSubDevices trước.", nil); return; }
+    if (!info) { reject(@"mesh_scan_required", @"Chưa scan thấy mac - gọi searchSubDevices trước.", nil); return; }
     [self.sigManager startActive:@[info]];
   } else {
     ThingBleMeshDeviceModel *dev = self.tuyaScanned[mac];
-    if (!dev) { reject(@"mesh_scan_required", @"Chưa scan thấy mac — gọi searchSubDevices trước.", nil); return; }
+    if (!dev) { reject(@"mesh_scan_required", @"Chưa scan thấy mac - gọi searchSubDevices trước.", nil); return; }
     [[ThingBLEMeshManager sharedInstance] activeMeshDevice:dev];
   }
 }
@@ -216,7 +216,7 @@ static BOOL TuyaIsSig(NSString *meshType) { return [meshType.lowercaseString isE
   self.activateResolve = nil; self.activateReject = nil;
 }
 
-// addListener:/removeListeners: kế thừa từ RCTEventEmitter (TuyaEventEmitter) — không khai lại.
+// addListener:/removeListeners: kế thừa từ RCTEventEmitter (TuyaEventEmitter) - không khai lại.
 
 // ---------- TurboModule boilerplate ----------
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:

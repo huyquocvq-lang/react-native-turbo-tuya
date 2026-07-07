@@ -16,7 +16,7 @@
 // Verbatim: docs/research/tuya-home-sdk-message-management.md. Android wired phần push-total/DND-write/registerDevice/deleteMessages.
 static void TuyaTODO(NSString *what, RCTPromiseRejectBlock reject) {
   reject(@"ios_todo",
-         [NSString stringWithFormat:@"iOS '%@' chưa wire — xem docs/research/tuya-home-sdk-message-management.md.", what],
+         [NSString stringWithFormat:@"iOS '%@' chưa wire - xem docs/research/tuya-home-sdk-message-management.md.", what],
          nil);
 }
 

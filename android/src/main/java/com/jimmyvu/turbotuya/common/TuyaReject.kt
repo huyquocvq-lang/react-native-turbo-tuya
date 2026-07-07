@@ -6,7 +6,7 @@ import com.facebook.react.bridge.Promise
 /**
  * Reject a Promise with the standard TuyaError shape { code, message, domain }.
  * domain: "sdk" (on-device SDK), "cloud" (OpenAPI), "network". Matches src/errors.ts (TuyaErrors).
- * Dùng dần cho các module mới — đừng nuốt code về "-1".
+ * Dùng dần cho các module mới - đừng nuốt code về "-1".
  */
 object TuyaReject {
   @JvmStatic

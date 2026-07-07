@@ -129,7 +129,7 @@ export type MeshStatusChangedEvent = {
 export type Subscription = { remove(): void };
 
 /**
- * Facade phẳng gộp 9 TurboModule — giữ tương thích `Tuya.<method>()`.
+ * Facade phẳng gộp 9 TurboModule - giữ tương thích `Tuya.<method>()`.
  * Mỗi tính năng là 1 native module riêng (Core/Auth/Home/Pairing/Device/Ota/Scene/Timer/Message);
  * có thể import thẳng sub-module ở trên nếu muốn tách rõ theo feature.
  */

@@ -1,14 +1,14 @@
 #import "TuyaDevice.h"
 #import <ThingSmartHomeKit/ThingSmartKit.h>
 
-// TuyaDevice (iOS) — WIRED: DP control (publishDps + mode), snapshot/getDps/online, rename/remove, and the
+// TuyaDevice (iOS) - WIRED: DP control (publishDps + mode), snapshot/getDps/online, rename/remove, and the
 // status listener (ThingSmartDeviceDelegate device:dpsUpdate:/deviceInfoUpdate: → emit onDeviceStatus).
 // Verbatim: docs/research/tuya-home-sdk-device-control.md (section iOS).
 // TODO (selector/feature chưa verbatim trên iOS): queryDp, isCloudConnected, resetFactory, getWifiSignal,
 //   publishDpsWithChannels, publishDpsAwaitAck, sendCacheDps, bleConnect/bleDisconnect/isBleLocalOnline.
 static void TuyaTODO(NSString *what, RCTPromiseRejectBlock reject) {
   reject(@"ios_todo",
-         [NSString stringWithFormat:@"iOS '%@' chưa wire — xem docs/research/tuya-home-sdk-device-control.md.", what],
+         [NSString stringWithFormat:@"iOS '%@' chưa wire - xem docs/research/tuya-home-sdk-device-control.md.", what],
          nil);
 }
 
@@ -199,7 +199,7 @@ RCT_EXPORT_MODULE()
   for (ThingSmartDevice *dev in _devices.allValues) { dev.delegate = nil; }
 }
 
-// addListener:/removeListeners: kế thừa từ RCTEventEmitter (TuyaEventEmitter) — không khai lại.
+// addListener:/removeListeners: kế thừa từ RCTEventEmitter (TuyaEventEmitter) - không khai lại.
 
 // ---------- TurboModule boilerplate ----------
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:

@@ -1,16 +1,16 @@
 #import "TuyaHome.h"
 #import <ThingSmartHomeKit/ThingSmartKit.h>
 
-// TuyaHome (iOS) — WIRED: home CRUD (create/list/detail/update/dismiss) + weather sketch + change/status
+// TuyaHome (iOS) - WIRED: home CRUD (create/list/detail/update/dismiss) + weather sketch + change/status
 // listeners (ThingSmartHomeManagerDelegate / ThingSmartHomeDelegate → emit onHomeChange).
 // Verbatim selectors: docs/research/tuya-home-sdk-home-management.md (section A iOS).
 // TODO: getHomeWeatherDetail (DashBoard/option model field chưa verbatim).
-// ⚠️ Verify: ThingSmartHomeModel.role numeric (iOS ThingHomeRoleType có thể KHÁC scheme 2/1/0 của Android — chuẩn hoá sau);
-//    tên delegate method cấp home (home:didAddDeivce: / didRemoveDeivce: / homeDidUpdateInfo:) — note đánh dấu cần verify.
+// ⚠️ Verify: ThingSmartHomeModel.role numeric (iOS ThingHomeRoleType có thể KHÁC scheme 2/1/0 của Android - chuẩn hoá sau);
+//    tên delegate method cấp home (home:didAddDeivce: / didRemoveDeivce: / homeDidUpdateInfo:) - note đánh dấu cần verify.
 
 static void TuyaTODO(NSString *what, RCTPromiseRejectBlock reject) {
   reject(@"ios_todo",
-         [NSString stringWithFormat:@"iOS '%@' chưa wire — xem docs/research/tuya-home-sdk-home-management.md.", what],
+         [NSString stringWithFormat:@"iOS '%@' chưa wire - xem docs/research/tuya-home-sdk-home-management.md.", what],
          nil);
 }
 
@@ -221,7 +221,7 @@ RCT_EXPORT_MODULE()
   [self emit:@"onHomeChange" body:@{ @"type": @"sharedDeviceList", @"devIds": ids }];
 }
 
-// ---------- ThingSmartHomeDelegate (cấp home — ⚠️ tên method cần verify) ----------
+// ---------- ThingSmartHomeDelegate (cấp home - ⚠️ tên method cần verify) ----------
 - (void)home:(ThingSmartHome *)home didAddDeivce:(ThingSmartDeviceModel *)device {
   [self emit:@"onHomeChange" body:@{ @"type": @"deviceAdded",
                                      @"homeId": @(home.homeModel.homeId),
@@ -244,7 +244,7 @@ RCT_EXPORT_MODULE()
   for (ThingSmartHome *home in _homes.allValues) { home.delegate = nil; }
 }
 
-// addListener:/removeListeners: kế thừa từ RCTEventEmitter (TuyaEventEmitter) — không khai lại.
+// addListener:/removeListeners: kế thừa từ RCTEventEmitter (TuyaEventEmitter) - không khai lại.
 
 // ---------- TurboModule boilerplate ----------
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:

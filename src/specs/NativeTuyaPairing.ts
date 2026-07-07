@@ -1,7 +1,7 @@
 import { TurboModuleRegistry } from 'react-native';
 import type { TurboModule } from 'react-native';
 
-// TurboModule: TuyaPairing — ghép nối thiết bị Wi-Fi (EZ/AP) + BLE + combo BLE+Wi-Fi (dual-mode).
+// TurboModule: TuyaPairing - ghép nối thiết bị Wi-Fi (EZ/AP) + BLE + combo BLE+Wi-Fi (dual-mode).
 // Phát event: onPairingProgress (kể cả combo stage), onBleScan (qua NativeEventEmitter) → cần addListener/removeListeners.
 export type DeviceResult = {
   devId: string;
@@ -50,7 +50,7 @@ export interface Spec extends TurboModule {
   stopBleWifiPairing(uuid: string): void;
 
   // --- Auto-token Wi-Fi (EZ/AP) ---
-  // Như startWifiPairing nhưng tự getActivatorToken(homeId) — khỏi quản lý token thủ công.
+  // Như startWifiPairing nhưng tự getActivatorToken(homeId) - khỏi quản lý token thủ công.
   startWifiPairingAuto(
     homeId: number,
     mode: string,

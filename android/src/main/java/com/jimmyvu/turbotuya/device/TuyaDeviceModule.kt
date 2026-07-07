@@ -1,6 +1,6 @@
 package com.jimmyvu.turbotuya.device
 
-// Mở rộng theo docs/research/tuya-home-sdk-device-control.md + device-management (verbatim) — CHƯA build-verify.
+// Mở rộng theo docs/research/tuya-home-sdk-device-control.md + device-management (verbatim) - CHƯA build-verify.
 // ⚠️ Verify import: ThingDevicePublishModeEnum (package .sdk.enums có thể lệch). WiFi-signal/BLE/orders/cache để TODO.
 
 import com.jimmyvu.turbotuya.NativeTuyaDeviceSpec
@@ -20,7 +20,7 @@ import android.os.Handler
 import android.os.Looper
 import java.util.concurrent.atomic.AtomicBoolean
 
-// TuyaDevice — điều khiển DP + status + quản lý thiết bị (B4 mở rộng). Phát event onDeviceStatus.
+// TuyaDevice - điều khiển DP + status + quản lý thiết bị (B4 mở rộng). Phát event onDeviceStatus.
 class TuyaDeviceModule(reactContext: ReactApplicationContext) :
   NativeTuyaDeviceSpec(reactContext) {
 
@@ -41,7 +41,7 @@ class TuyaDeviceModule(reactContext: ReactApplicationContext) :
   private fun todo(promise: Promise, what: String) {
     promise.reject(
       "not_implemented",
-      "$what chưa wire (cần verify chữ ký native) — xem docs/research/tuya-home-sdk-device-control.md",
+      "$what chưa wire (cần verify chữ ký native) - xem docs/research/tuya-home-sdk-device-control.md",
     )
   }
 
@@ -73,7 +73,7 @@ class TuyaDeviceModule(reactContext: ReactApplicationContext) :
     channels: com.facebook.react.bridge.ReadableArray,
     promise: Promise,
   ) {
-    // publishDps(dps, orders, cb) với orders theo CommunicationEnum (giá trị int chưa rõ) — TODO verify.
+    // publishDps(dps, orders, cb) với orders theo CommunicationEnum (giá trị int chưa rõ) - TODO verify.
     todo(promise, "publishDpsWithChannels (CommunicationEnum)")
   }
 
@@ -142,7 +142,7 @@ class TuyaDeviceModule(reactContext: ReactApplicationContext) :
       m.putString("dpsJson", JSONObject((bean.dps ?: emptyMap<String, Any>()) as Map<*, *>).toString())
       m.putBoolean("isOnline", bean.isOnline) // getIsOnline(): LAN hoặc cloud
       m.putBoolean("isLocalOnline", bean.isLocalOnline)
-      m.putString("schemaJson", bean.schema?.toString() ?: "") // raw — verify format khi render
+      m.putString("schemaJson", bean.schema?.toString() ?: "") // raw - verify format khi render
       m.putString("dpCodesJson", JSONObject((bean.dpCodes ?: emptyMap<String, Any>()) as Map<*, *>).toString())
       promise.resolve(m)
     } catch (e: Throwable) {
@@ -166,7 +166,7 @@ class TuyaDeviceModule(reactContext: ReactApplicationContext) :
     dpCacheType: Double,
     promise: Promise,
   ) {
-    // sendCacheDps(devId, dps, validity, dpCacheType, IThingDataCallback<Boolean>) — chữ ký cần verify; low-value cho ice-bath.
+    // sendCacheDps(devId, dps, validity, dpCacheType, IThingDataCallback<Boolean>) - chữ ký cần verify; low-value cho ice-bath.
     todo(promise, "sendCacheDps")
   }
 
@@ -225,7 +225,7 @@ class TuyaDeviceModule(reactContext: ReactApplicationContext) :
   }
 
   override fun getWifiSignal(devId: String, promise: Promise) {
-    // requestWifiSignal(WifiSignalListener) — listener chưa verbatim → TODO verify.
+    // requestWifiSignal(WifiSignalListener) - listener chưa verbatim → TODO verify.
     todo(promise, "getWifiSignal")
   }
 

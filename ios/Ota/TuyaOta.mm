@@ -1,14 +1,14 @@
 #import "TuyaOta.h"
 #import <ThingSmartHomeKit/ThingSmartKit.h>
 
-// TuyaOta (iOS) — WIRED: checkFirmwareUpgrade / startFirmwareUpgrade (fetch+filter theo type) / cancelFirmwareUpgrade
+// TuyaOta (iOS) - WIRED: checkFirmwareUpgrade / startFirmwareUpgrade (fetch+filter theo type) / cancelFirmwareUpgrade
 // + progress qua ThingSmartDeviceDelegate (firmwareUpgradeProgress / otaUpdateStatusChanged) → onOtaProgress/onOtaStatusChanged.
 // Verbatim: docs/research/tuya-home-sdk-device-management.md (OTA iOS).
 // TODO (selector iOS chưa verbatim): confirmWarningUpgrade, get/setAutoUpgradeSwitch.
 // ⚠️ Verify: property của ThingSmartFirmwareUpgradeModel / ThingSmartFirmwareUpgradeStatusModel.
 static void TuyaTODO(NSString *what, RCTPromiseRejectBlock reject) {
   reject(@"ios_todo",
-         [NSString stringWithFormat:@"iOS '%@' chưa wire — xem docs/research/tuya-home-sdk-device-management.md (OTA).", what],
+         [NSString stringWithFormat:@"iOS '%@' chưa wire - xem docs/research/tuya-home-sdk-device-management.md (OTA).", what],
          nil);
 }
 

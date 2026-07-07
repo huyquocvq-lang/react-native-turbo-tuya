@@ -1,6 +1,6 @@
 package com.jimmyvu.turbotuya.mesh
 
-// B15 (P3) theo docs/research/tuya-home-sdk-bluetooth.md §7 (SIG mesh) + §8 (Tuya mesh) — CHƯA build-verify.
+// B15 (P3) theo docs/research/tuya-home-sdk-bluetooth.md §7 (SIG mesh) + §8 (Tuya mesh) - CHƯA build-verify.
 // SKELETON có chủ đích (như B7/B13/B14): mesh là subsystem STATEFUL lớn (client proxy lifecycle + device instance +
 // nhiều listener) + iOS sig/tuya mesh signature CHƯA verbatim (note "Câu hỏi mở") + note ghi "chỉ làm nếu có thiết bị
 // mesh thật". Package CHƯA verbatim → TODO-reject + intended-call để wire trên SDK thật. Giữ event plumbing.
@@ -21,7 +21,7 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.WritableMap
 import com.facebook.react.modules.core.DeviceEventManagerModule
 
-// TuyaMesh — BLE Mesh (skeleton). Phát event onMeshDeviceFound/onMeshDpUpdate/onMeshStatusChanged.
+// TuyaMesh - BLE Mesh (skeleton). Phát event onMeshDeviceFound/onMeshDpUpdate/onMeshStatusChanged.
 class TuyaMeshModule(reactContext: ReactApplicationContext) :
   NativeTuyaMeshSpec(reactContext) {
 
@@ -42,7 +42,7 @@ class TuyaMeshModule(reactContext: ReactApplicationContext) :
   private fun todo(promise: Promise, what: String) {
     promise.reject(
       "not_implemented",
-      "$what chưa wire (mesh subsystem chưa verbatim) — xem docs/research/tuya-home-sdk-bluetooth.md §7/§8 + intended-call.",
+      "$what chưa wire (mesh subsystem chưa verbatim) - xem docs/research/tuya-home-sdk-bluetooth.md §7/§8 + intended-call.",
     )
   }
 
@@ -52,7 +52,7 @@ class TuyaMeshModule(reactContext: ReactApplicationContext) :
 
   // meshType: 'sig' → getThingSigMeshClient()/newSigMeshDeviceInstance ; 'tuya' → getThingBlueMeshClient()/newBlueMeshDeviceInstance.
   override fun startMeshClient(homeId: Double, meshId: String, meshType: String, searchTimeSec: Double) {
-    /* intended: <client>.initMesh(meshId)+startClient(<meshBean>) — cần bean từ list + package chưa verbatim */
+    /* intended: <client>.initMesh(meshId)+startClient(<meshBean>) - cần bean từ list + package chưa verbatim */
   }
   override fun stopMeshClient(homeId: Double, meshId: String, meshType: String) {
     /* intended: <client>.stopClient() */

@@ -1,10 +1,10 @@
 import { TurboModuleRegistry } from 'react-native';
 import type { TurboModule } from 'react-native';
 
-// TurboModule: TuyaMesh — Bluetooth Mesh (SIG + Tuya private). Phát event:
+// TurboModule: TuyaMesh - Bluetooth Mesh (SIG + Tuya private). Phát event:
 //   onMeshDeviceFound (search), onMeshDpUpdate (DP), onMeshStatusChanged (online/offline node).
-// LƯU Ý: STATEFUL — phải startMeshClient (connect proxy) trước khi search/control. Native GIỮ mesh client +
-//   device instance. (P3 — note bluetooth: chỉ làm nếu thực sự có thiết bị mesh; ice-bath nhiều khả năng KHÔNG cần.)
+// LƯU Ý: STATEFUL - phải startMeshClient (connect proxy) trước khi search/control. Native GIỮ mesh client +
+//   device instance. (P3 - note bluetooth: chỉ làm nếu thực sự có thiết bị mesh; ice-bath nhiều khả năng KHÔNG cần.)
 export type MeshInfo = {
   meshId: string;
   name: string;
@@ -25,7 +25,7 @@ export interface Spec extends TurboModule {
   getMeshList(homeId: number): Promise<MeshInfo[]>;
 
   // --- Client lifecycle (connect proxy) ---
-  // meshType: 'sig' | 'tuya' — chọn SIG (ThingSmartSIGMeshManager) vs Tuya (ThingBLEMeshManager) manager.
+  // meshType: 'sig' | 'tuya' - chọn SIG (ThingSmartSIGMeshManager) vs Tuya (ThingBLEMeshManager) manager.
   // homeId: bắt buộc để dựng mesh instance (iOS bleMeshWithMeshId:homeId:) + SIG manager.
   startMeshClient(
     homeId: number,

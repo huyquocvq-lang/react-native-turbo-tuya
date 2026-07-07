@@ -5,7 +5,7 @@ import type { DemoCtx } from '../useDemo';
 // Scene + Timer/Message/Member + Matter/Mesh. Several are TODO/skeleton on Android → reject (by design).
 export function AdvancedSection({ d }: { d: DemoCtx }) {
   return (
-    <Section title="6 · Scene · Timer · Message · Member · Matter · Mesh" subtitle="P2/P3 — some methods reject with not_implemented (intended-call documented in source)">
+    <Section title="6 · Scene · Timer · Message · Member · Matter · Mesh" subtitle="P2/P3 - some methods reject with not_implemented (intended-call documented in source)">
       <Btn title="Scene list" onPress={d.run('getSceneList', () => Tuya.getSceneList(d.hid()))} kind="ghost" />
       <Btn title="Timer list" onPress={d.run('getTimerList', () => Tuya.getTimerList('', d.devId, 1))} kind="ghost" />
       <Btn title="Push ON" onPress={d.run('setPushStatus', () => Tuya.setPushStatus(true))} kind="ghost" />

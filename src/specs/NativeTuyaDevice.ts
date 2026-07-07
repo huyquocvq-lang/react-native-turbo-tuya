@@ -1,7 +1,7 @@
 import { TurboModuleRegistry } from 'react-native';
 import type { TurboModule } from 'react-native';
 
-// TurboModule: TuyaDevice — điều khiển Data Points (DP) + lắng nghe trạng thái + quản lý thiết bị.
+// TurboModule: TuyaDevice - điều khiển Data Points (DP) + lắng nghe trạng thái + quản lý thiết bị.
 // Phát event: onDeviceStatus (online/offline + DP update) → cần addListener/removeListeners.
 export type DeviceSnapshot = {
   devId: string;

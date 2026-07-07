@@ -1,7 +1,7 @@
 import { TurboModuleRegistry } from 'react-native';
 import type { TurboModule } from 'react-native';
 
-// TurboModule: TuyaOta — cập nhật firmware (check/start/cancel/confirm/auto-switch).
+// TurboModule: TuyaOta - cập nhật firmware (check/start/cancel/confirm/auto-switch).
 // Phát event: onOtaProgress / onOtaStatusChanged / onOtaSuccess / onOtaFailure → cần addListener/removeListeners.
 export type UpgradeInfo = {
   type: number; // channel: 0=main(Wi-Fi/BT), 1=BT, 3=Zigbee, 9=MCU...

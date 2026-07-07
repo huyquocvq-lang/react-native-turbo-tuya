@@ -1,6 +1,6 @@
 package com.jimmyvu.turbotuya.ota
 
-// Module mới theo docs/research/tuya-home-sdk-device-management.md (mục OTA) — CHƯA build-verify.
+// Module mới theo docs/research/tuya-home-sdk-device-management.md (mục OTA) - CHƯA build-verify.
 // ⚠️ Lần build đầu verify chữ ký + package: IThingOTAService, IGetOtaInfoCallback, IDevOTAListener,
 // UpgradeInfoBean (note ghi rõ tên callback nhưng tham số chính xác cần đối chiếu Javadoc 7.5.x).
 
@@ -21,7 +21,7 @@ import com.thingclips.smart.sdk.api.IResultCallback
 import com.thingclips.smart.sdk.api.IThingDataCallback
 import com.thingclips.smart.sdk.api.IThingOTAService
 
-// TuyaOta — cập nhật firmware. Phát event onOtaProgress/onOtaStatusChanged/onOtaSuccess/onOtaFailure.
+// TuyaOta - cập nhật firmware. Phát event onOtaProgress/onOtaStatusChanged/onOtaSuccess/onOtaFailure.
 class TuyaOtaModule(reactContext: ReactApplicationContext) :
   NativeTuyaOtaSpec(reactContext) {
 

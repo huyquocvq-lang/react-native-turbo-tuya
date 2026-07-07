@@ -1,6 +1,6 @@
 package com.jimmyvu.turbotuya.auth
 
-// Viết theo docs/research/tuya-home-sdk-user-account.md (verbatim signatures) — CHƯA build-verify.
+// Viết theo docs/research/tuya-home-sdk-user-account.md (verbatim signatures) - CHƯA build-verify.
 // ⚠️ Lần build đầu kiểm tra đường dẫn import của: IReNickNameCallback, IResetPasswordCallback,
 // TempUnitEnum, INeedLoginListener (package com.thingclips.* có thể lệch theo bản SDK 7.5.x).
 
@@ -21,7 +21,7 @@ import com.thingclips.smart.sdk.api.INeedLoginListener
 import com.thingclips.smart.sdk.api.IResultCallback
 import com.thingclips.smart.sdk.enums.TempUnitEnum
 
-// TuyaAuth — đăng ký/đăng nhập email + third-party + session + profile (B3 mở rộng).
+// TuyaAuth - đăng ký/đăng nhập email + third-party + session + profile (B3 mở rộng).
 class TuyaAuthModule(reactContext: ReactApplicationContext) :
   NativeTuyaAuthSpec(reactContext) {
 
@@ -51,7 +51,7 @@ class TuyaAuthModule(reactContext: ReactApplicationContext) :
   private fun todo(promise: Promise, what: String) {
     promise.reject(
       "not_implemented",
-      "$what chưa wire (cần verify chữ ký native) — xem docs/research/tuya-home-sdk-user-account.md",
+      "$what chưa wire (cần verify chữ ký native) - xem docs/research/tuya-home-sdk-user-account.md",
     )
   }
 
@@ -189,7 +189,7 @@ class TuyaAuthModule(reactContext: ReactApplicationContext) :
   }
 
   override fun updateAvatarByUrl(imageUrl: String, promise: Promise) {
-    // updateAvatarWithImageUrl(url, IBooleanCallback) — DEPRECATED bởi Tuya (rủi ro compliance).
+    // updateAvatarWithImageUrl(url, IBooleanCallback) - DEPRECATED bởi Tuya (rủi ro compliance).
     // Ưu tiên avatar preset; để TODO tránh phụ thuộc API deprecated + IBooleanCallback.
     todo(promise, "updateAvatarByUrl (deprecated)")
   }
@@ -297,7 +297,7 @@ class TuyaAuthModule(reactContext: ReactApplicationContext) :
     )
   }
 
-  // ---------- Third-party bind (bindThirdPlatform 5 String — thứ tự param chưa rõ → TODO verify) ----------
+  // ---------- Third-party bind (bindThirdPlatform 5 String - thứ tự param chưa rõ → TODO verify) ----------
   override fun bindThirdParty(provider: String, token: String, extraInfo: String, promise: Promise) =
     todo(promise, "bindThirdParty")
 
@@ -307,7 +307,7 @@ class TuyaAuthModule(reactContext: ReactApplicationContext) :
   override fun getLinkedThirdParties(promise: Promise) =
     todo(promise, "getLinkedThirdParties")
 
-  // ---------- Multi-device (Android chưa có signature verbatim — TODO verify) ----------
+  // ---------- Multi-device (Android chưa có signature verbatim - TODO verify) ----------
   override fun getLoginTerminals(promise: Promise) =
     todo(promise, "getLoginTerminals (Android)")
 
@@ -336,7 +336,7 @@ class TuyaAuthModule(reactContext: ReactApplicationContext) :
     m.putDouble("tempUnit", (user?.tempUnit ?: 0).toDouble())
     m.putString("timezoneId", user?.timezoneId ?: "")
     m.putString("countryCode", "") // Android User bean không expose countryCode trực tiếp (iOS có)
-    m.putString("regionCode", "") // Android User bean không có regionCode (nằm trong Domain) — verify
+    m.putString("regionCode", "") // Android User bean không có regionCode (nằm trong Domain) - verify
     return m
   }
 }

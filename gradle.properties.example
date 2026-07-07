@@ -1,4 +1,4 @@
 # Mẫu cho app tiêu thụ Android (example/android/gradle.properties hoặc apps/mobile).
-# Copy giá trị thật vào gradle.properties (ĐÃ gitignore) — đừng commit secret.
+# Copy giá trị thật vào gradle.properties (ĐÃ gitignore) - đừng commit secret.
 THING_SMART_APPKEY=your_tuya_app_key
 THING_SMART_SECRET=your_tuya_app_secret

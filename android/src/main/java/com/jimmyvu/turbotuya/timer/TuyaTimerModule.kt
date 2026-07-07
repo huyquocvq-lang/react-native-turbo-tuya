@@ -1,8 +1,8 @@
 package com.jimmyvu.turbotuya.timer
 
-// Theo docs/research/tuya-home-sdk-device-control.md (mục timer, verbatim builder) — CHƯA build-verify.
+// Theo docs/research/tuya-home-sdk-device-control.md (mục timer, verbatim builder) - CHƯA build-verify.
 // ⚠️ Verify package/import: ThingTimerBuilder, TimerDeviceTypeEnum, TimerUpdateEnum (com.thingclips.* có thể lệch);
-//    và FORMAT của setActions(actionsJson) (note "Câu hỏi mở" — ThingTimerBuilder không có setTime, time nằm trong actions).
+//    và FORMAT của setActions(actionsJson) (note "Câu hỏi mở" - ThingTimerBuilder không có setTime, time nằm trong actions).
 // getTimerList để TODO vì bean TimerTask chưa rõ field (map khi verify trên SDK thật).
 //
 // Intended: timer = ThingHomeSdk.getTimerInstance();
@@ -21,7 +21,7 @@ import com.thingclips.smart.home.sdk.constant.TimerUpdateEnum
 import com.thingclips.smart.sdk.api.IResultCallback
 import org.json.JSONObject
 
-// TuyaTimer — hẹn giờ / lịch cloud. Không phát event.
+// TuyaTimer - hẹn giờ / lịch cloud. Không phát event.
 class TuyaTimerModule(reactContext: ReactApplicationContext) :
   NativeTuyaTimerSpec(reactContext) {
 
@@ -48,7 +48,7 @@ class TuyaTimerModule(reactContext: ReactApplicationContext) :
     val j = JSONObject(inputJson)
     val time = j.optString("time")
     val dps = j.optString("dpsJson", "{}")
-    // Best-guess actions: [{ "time": "HH:mm", "dps": {...} }] — đổi theo format thật khi verify.
+    // Best-guess actions: [{ "time": "HH:mm", "dps": {...} }] - đổi theo format thật khi verify.
     val actions = "[{\"time\":\"$time\",\"dps\":$dps}]"
     return ThingTimerBuilder.Builder()
       .taskName(j.optString("taskName"))
@@ -111,7 +111,7 @@ class TuyaTimerModule(reactContext: ReactApplicationContext) :
     // → map TimerTask → TimerItem[]. Bean TimerTask field chưa rõ → TODO verify trên SDK thật.
     promise.reject(
       "not_implemented",
-      "getTimerList chưa wire (bean TimerTask chưa verbatim) — xem docs/research/tuya-home-sdk-device-control.md.",
+      "getTimerList chưa wire (bean TimerTask chưa verbatim) - xem docs/research/tuya-home-sdk-device-control.md.",
     )
   }
 }

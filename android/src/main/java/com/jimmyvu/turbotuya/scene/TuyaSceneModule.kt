@@ -1,6 +1,6 @@
 package com.jimmyvu.turbotuya.scene
 
-// ⚠️ B7 — SKELETON có chủ đích. Scene SDK của Tuya (getSceneServiceInstance + NormalScene/SceneCondition/
+// ⚠️ B7 - SKELETON có chủ đích. Scene SDK của Tuya (getSceneServiceInstance + NormalScene/SceneCondition/
 // SceneAction/SavedScene/SceneChangeCallback + IResultCallback<T> generic + builder DeviceConditionBuilder...)
 // thuộc API mới, PACKAGE class + cách lắp NormalScene CHƯA verbatim (xem docs/research/tuya-home-sdk-smart-scenes.md
 // "Câu hỏi mở"). Không import blind để tránh vỡ compile toàn module. Mỗi method ghi rõ INTENDED CALL để wire trên
@@ -26,7 +26,7 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.WritableMap
 import com.facebook.react.modules.core.DeviceEventManagerModule
 
-// TuyaScene — tap-to-run + automation. Phát event onSceneChange. (skeleton; wire trên SDK thật)
+// TuyaScene - tap-to-run + automation. Phát event onSceneChange. (skeleton; wire trên SDK thật)
 class TuyaSceneModule(reactContext: ReactApplicationContext) :
   NativeTuyaSceneSpec(reactContext) {
 
@@ -46,7 +46,7 @@ class TuyaSceneModule(reactContext: ReactApplicationContext) :
   private fun todo(promise: Promise, what: String) {
     promise.reject(
       "not_implemented",
-      "$what chưa wire (scene SDK chưa verbatim) — xem docs/research/tuya-home-sdk-smart-scenes.md + comment intended-call.",
+      "$what chưa wire (scene SDK chưa verbatim) - xem docs/research/tuya-home-sdk-smart-scenes.md + comment intended-call.",
     )
   }
 

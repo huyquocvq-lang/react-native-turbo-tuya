@@ -5,7 +5,7 @@ import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.thingclips.smart.home.sdk.ThingHomeSdk
 
-// TuyaCore — init/destroy SDK. AppKey/AppSecret đọc từ AndroidManifest meta-data của app tiêu thụ.
+// TuyaCore - init/destroy SDK. AppKey/AppSecret đọc từ AndroidManifest meta-data của app tiêu thụ.
 class TuyaCoreModule(reactContext: ReactApplicationContext) :
   NativeTuyaCoreSpec(reactContext) {
 

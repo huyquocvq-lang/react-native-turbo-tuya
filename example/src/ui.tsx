@@ -164,7 +164,7 @@ export function Console({
           </Text>
         ))}
         {lines.length === 0 ? (
-          <Text style={styles.logMuted}>No output yet — tap an action above.</Text>
+          <Text style={styles.logMuted}>No output yet - tap an action above.</Text>
         ) : null}
       </ScrollView>
     </View>

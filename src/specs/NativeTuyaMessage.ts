@@ -1,7 +1,7 @@
 import { TurboModuleRegistry } from 'react-native';
 import type { TurboModule } from 'react-native';
 
-// TurboModule: TuyaMessage — gộp Message Center + Push status + Do-Not-Disturb. KHÔNG phát event.
+// TurboModule: TuyaMessage - gộp Message Center + Push status + Do-Not-Disturb. KHÔNG phát event.
 // type (message): 'alarm' | 'family' | 'notification'. pushType: + 'marketing'.
 export type TuyaMessageItem = {
   id: string;
@@ -91,7 +91,7 @@ export interface Spec extends TurboModule {
     devIds: string[]
   ): Promise<number>;
   modifyDnd(
-    dndId: number, // KHÔNG đặt tên 'id' — keyword ObjC sẽ vỡ selector
+    dndId: number, // KHÔNG đặt tên 'id' - keyword ObjC sẽ vỡ selector
     startTime: string,
     endTime: string,
     loops: string,

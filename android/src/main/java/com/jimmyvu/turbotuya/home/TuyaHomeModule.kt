@@ -1,6 +1,6 @@
 package com.jimmyvu.turbotuya.home
 
-// B10 mở rộng theo docs/research/tuya-home-sdk-home-management.md (verbatim) — CHƯA build-verify.
+// B10 mở rộng theo docs/research/tuya-home-sdk-home-management.md (verbatim) - CHƯA build-verify.
 // ⚠️ Verify import/chữ ký: WeatherBean + IIGetHomeWetherSketchCallBack (package + onFailure args),
 //    IThingHomeChangeListener/IThingHomeStatusListener (package .home.sdk.api?), unRegisterHomeStatusListener,
 //    DashBoardBean (getHomeWeatherDetail → để TODO vì field chưa rõ).
@@ -24,12 +24,12 @@ import com.thingclips.smart.sdk.api.IResultCallback
 import com.thingclips.smart.sdk.bean.DeviceBean
 import com.thingclips.smart.sdk.bean.GroupBean
 
-// TuyaHome — quản lý home (app dùng 1 nhà/user) + weather + listeners. Phát event onHomeChange.
+// TuyaHome - quản lý home (app dùng 1 nhà/user) + weather + listeners. Phát event onHomeChange.
 class TuyaHomeModule(reactContext: ReactApplicationContext) :
   NativeTuyaHomeSpec(reactContext) {
 
   private val ctx = reactContext
-  // Listener cấp manager (1) + listener cấp home theo homeId (n) — giữ tham chiếu để gỡ đúng instance.
+  // Listener cấp manager (1) + listener cấp home theo homeId (n) - giữ tham chiếu để gỡ đúng instance.
   private var changeListener: IThingHomeChangeListener? = null
   private val statusListeners = mutableMapOf<Long, IThingHomeStatusListener>()
 
@@ -156,7 +156,7 @@ class TuyaHomeModule(reactContext: ReactApplicationContext) :
     //           → onSuccess(ArrayList<DashBoardBean>); field DashBoardBean chưa verbatim → serialize TODO.
     promise.reject(
       "not_implemented",
-      "getHomeWeatherDetail chưa wire (DashBoardBean field chưa rõ) — xem docs/research/tuya-home-sdk-home-management.md",
+      "getHomeWeatherDetail chưa wire (DashBoardBean field chưa rõ) - xem docs/research/tuya-home-sdk-home-management.md",
     )
   }
 

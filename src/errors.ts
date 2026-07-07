@@ -1,4 +1,4 @@
-// TuyaErrors — JS-only classifier for Tuya Home SDK error codes (static table, no native calls).
+// TuyaErrors - JS-only classifier for Tuya Home SDK error codes (static table, no native calls).
 // Source: docs/research/tuya-home-sdk-error-codes.md (cited). Lets the app decide retry / re-login /
 // new-token / user message from a (code, domain) pair without round-tripping to native.
 //
@@ -38,7 +38,7 @@ export type TuyaErrorInfo = {
   retryable: boolean;
   /** caller should fetch a fresh activator token before retrying (pairing/control). */
   needsNewToken: boolean;
-  /** session is gone — route the user back to login. */
+  /** session is gone - route the user back to login. */
   needsReLogin: boolean;
   /** i18n key the app maps to a user-facing message. */
   userMessageKey: string;
@@ -179,16 +179,16 @@ export function describe(
 ): string {
   const info = classify(code, domain);
   const text: Record<TuyaErrorCategory, string> = {
-    not_initialized: 'SDK not initialized — call Tuya.initSdk() first.',
-    not_logged_in: 'Not signed in — please sign in again.',
+    not_initialized: 'SDK not initialized - call Tuya.initSdk() first.',
+    not_logged_in: 'Not signed in - please sign in again.',
     invalid_param: 'Invalid parameter.',
-    token_expired: 'Token expired or mismatched — get a new token and try again.',
+    token_expired: 'Token expired or mismatched - get a new token and try again.',
     pairing_failed: 'Pairing failed.',
-    pairing_timeout: 'Pairing timed out — try again.',
+    pairing_timeout: 'Pairing timed out - try again.',
     dp_unsupported: 'DP not supported or wrong type/value.',
-    mqtt: 'Realtime connection (MQTT) lost — try again.',
+    mqtt: 'Realtime connection (MQTT) lost - try again.',
     device_offline: 'Device is offline or unreachable.',
-    network: 'Network error — check your connection and try again.',
+    network: 'Network error - check your connection and try again.',
     ssl_clock: 'Device or phone clock is wrong, or SSL certificate error.',
     account: 'Account error (OTP code, email, or password).',
     illegal_client: 'Wrong AppKey/Secret or package/bundleId/SHA-256/Data Center.',

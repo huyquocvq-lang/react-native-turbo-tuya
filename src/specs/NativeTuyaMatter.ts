@@ -1,10 +1,10 @@
 import { TurboModuleRegistry } from 'react-native';
 import type { TurboModule } from 'react-native';
 
-// TurboModule: TuyaMatter — ghép nối thiết bị Matter (API riêng getMatterDevActivatorInstance).
+// TurboModule: TuyaMatter - ghép nối thiết bị Matter (API riêng getMatterDevActivatorInstance).
 // Phát event: onMatterDeviceFound (discovery), onMatterAttestation (thiết bị chưa cert), onMatterError.
-// LƯU Ý: luồng STATEFUL — gọi tuần tự parseSetupCode → connectDevice → commissionDevice. Native GIỮ
-//   SetupPayload/ConnectResult giữa các call (KHÔNG round-trip object native qua JS). (P3 — ít khả năng ice-bath cần.)
+// LƯU Ý: luồng STATEFUL - gọi tuần tự parseSetupCode → connectDevice → commissionDevice. Native GIỮ
+//   SetupPayload/ConnectResult giữa các call (KHÔNG round-trip object native qua JS). (P3 - ít khả năng ice-bath cần.)
 export type MatterSetupPayload = {
   version: number;
   vendorId: number;

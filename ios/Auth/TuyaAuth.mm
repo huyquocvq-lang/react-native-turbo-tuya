@@ -1,14 +1,14 @@
 #import "TuyaAuth.h"
 #import <ThingSmartHomeKit/ThingSmartKit.h>
 
-// TuyaAuth (iOS) — profile/session/reset/cancel/multi-device + email send-code/login/register theo selector
+// TuyaAuth (iOS) - profile/session/reset/cancel/multi-device + email send-code/login/register theo selector
 // (docs/research/tuya-home-sdk-user-account.md). thirdLogin ĐÃ wire (loginByAuth2WithType:, 2026-07-02,
 // docs/research/tuya-ios-third-party-login.md). loginWithEmailCode + bind/getLinked VẪN TODO.
-// ⚠️ loginByEmail/registerByEmail là selector chuẩn Tuya (KHÔNG có verbatim trong note) — verify khi build;
+// ⚠️ loginByEmail/registerByEmail là selector chuẩn Tuya (KHÔNG có verbatim trong note) - verify khi build;
 //    sendVerifyCode dùng ThingSuccessBlock (signature void/id verify trên header).
 static void TuyaTODO(NSString *what, RCTPromiseRejectBlock reject) {
   reject(@"ios_todo",
-         [NSString stringWithFormat:@"iOS '%@' chưa wire — xem docs/research/tuya-home-sdk-user-account.md.", what],
+         [NSString stringWithFormat:@"iOS '%@' chưa wire - xem docs/research/tuya-home-sdk-user-account.md.", what],
          nil);
 }
 
@@ -48,7 +48,7 @@ RCT_EXPORT_MODULE()
 }
 
 - (void)onSessionInvalid {
-  // ⚠️ SDK < v5.1 có thể bắn nhiều lần — cân nhắc debounce ở JS.
+  // ⚠️ SDK < v5.1 có thể bắn nhiều lần - cân nhắc debounce ở JS.
   [self emit:@"onSessionExpired" body:@{ @"reason": @"session_invalid" }];
 }
 
@@ -183,7 +183,7 @@ RCT_EXPORT_MODULE()
 - (void)updateAvatarByUrl:(NSString *)imageUrl
                   resolve:(RCTPromiseResolveBlock)resolve
                    reject:(RCTPromiseRejectBlock)reject {
-  // updateAvatarWithImageUrl: DEPRECATED bởi Tuya — ưu tiên avatar preset. Để TODO.
+  // updateAvatarWithImageUrl: DEPRECATED bởi Tuya - ưu tiên avatar preset. Để TODO.
   TuyaTODO(@"updateAvatarByUrl (deprecated)", reject);
 }
 
@@ -282,7 +282,7 @@ RCT_EXPORT_MODULE()
                                                 failure:^(NSError *e) { reject(@"reset_phone_pw_error", e.localizedDescription, e); }];
 }
 
-// ---------- Third-party bind (chưa có selector verbatim iOS — TODO) ----------
+// ---------- Third-party bind (chưa có selector verbatim iOS - TODO) ----------
 - (void)bindThirdParty:(NSString *)provider
                  token:(NSString *)token
              extraInfo:(NSString *)extraInfo
@@ -323,7 +323,7 @@ RCT_EXPORT_MODULE()
                                                     failure:^(NSError *e) { reject(@"terminate_session_error", e.localizedDescription, e); }];
 }
 
-// addListener:/removeListeners: kế thừa từ RCTEventEmitter (TuyaEventEmitter) — không khai lại.
+// addListener:/removeListeners: kế thừa từ RCTEventEmitter (TuyaEventEmitter) - không khai lại.
 
 // ---------- TurboModule boilerplate ----------
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:

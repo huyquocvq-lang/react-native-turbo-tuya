@@ -1,9 +1,9 @@
 import { TurboModuleRegistry } from 'react-native';
 import type { TurboModule } from 'react-native';
 
-// TurboModule: TuyaScene — ngữ cảnh thông minh (tap-to-run + automation).
+// TurboModule: TuyaScene - ngữ cảnh thông minh (tap-to-run + automation).
 // Phát event: onSceneChange (realtime add/update/delete/enable/disable) → cần addListener/removeListeners.
-// LƯU Ý codegen: KHÔNG union type (value luôn string — caller tự stringify); object type khai inline.
+// LƯU Ý codegen: KHÔNG union type (value luôn string - caller tự stringify); object type khai inline.
 // condition/action truyền dưới dạng JSON string đã build (qua buildXxxCondition/buildXxxAction).
 export type SceneSummary = {
   sceneId: string;
@@ -61,7 +61,7 @@ export interface Spec extends TurboModule {
   enableAutomationWithTime(sceneId: string, durationMs: number): Promise<boolean>; // Android-only
 
   // --- Builders (native build condition/action → trả JSON nạp vào saveScene) ---
-  // op (toán tử): '==' | '<' | '>' | '<=' | '>=' (KHÔNG dùng tên 'operator' — keyword C++/ObjC++).
+  // op (toán tử): '==' | '<' | '>' | '<=' | '>=' (KHÔNG dùng tên 'operator' - keyword C++/ObjC++).
   // value luôn là string (số/enum/bool stringify).
   buildDeviceCondition(
     devId: string,

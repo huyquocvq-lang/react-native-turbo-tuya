@@ -1,9 +1,9 @@
 package com.jimmyvu.turbotuya.message
 
-// Theo docs/research/tuya-home-sdk-message-management.md + push-notifications (verbatim) — CHƯA build-verify.
+// Theo docs/research/tuya-home-sdk-message-management.md + push-notifications (verbatim) - CHƯA build-verify.
 // ⚠️ WIRE phần callback proven (registerDevice/setPushStatus/DND-write/deleteMessages). TODO phần cần enum/bean
 //    chưa verbatim entry: MessageType(1/2/3), PushType(0/1/2/4), MessageListBean/MessageBean/MessageHasNew/PushStatusBean/
-//    DeviceAlarmNotDisturbVO — ghi intended-call để wire trên SDK thật.
+//    DeviceAlarmNotDisturbVO - ghi intended-call để wire trên SDK thật.
 // Intended (Android): push = ThingHomeSdk.getPushInstance(); msg = ThingHomeSdk.getMessageInstance().
 //   getMessageList(offset,limit, IThingDataCallback<MessageListBean>); getMessageListByMsgType(offset,limit,MessageType,cb)
 //   requestMessageNew(IThingDataCallback<MessageHasNew>); getPushStatus(IThingResultCallback<PushStatusBean>)
@@ -22,7 +22,7 @@ import com.thingclips.smart.sdk.api.IResultCallback
 import com.thingclips.smart.sdk.api.IThingDataCallback
 import com.thingclips.smart.sdk.bean.message.MessageListBean
 
-// TuyaMessage — message center + push status + DND. Không phát event.
+// TuyaMessage - message center + push status + DND. Không phát event.
 class TuyaMessageModule(reactContext: ReactApplicationContext) :
   NativeTuyaMessageSpec(reactContext) {
 
@@ -33,7 +33,7 @@ class TuyaMessageModule(reactContext: ReactApplicationContext) :
   private fun todo(promise: Promise, what: String) {
     promise.reject(
       "not_implemented",
-      "$what chưa wire (enum/bean chưa verbatim) — xem docs/research/tuya-home-sdk-message-management.md + intended-call.",
+      "$what chưa wire (enum/bean chưa verbatim) - xem docs/research/tuya-home-sdk-message-management.md + intended-call.",
     )
   }
 
@@ -44,7 +44,7 @@ class TuyaMessageModule(reactContext: ReactApplicationContext) :
 
   // ---------- Push token ----------
   override fun registerDevice(token: String, provider: String, promise: Promise) {
-    // provider: "fcm" (Android) — iOS gán deviceToken. unregister: TODO.
+    // provider: "fcm" (Android) - iOS gán deviceToken. unregister: TODO.
     ThingHomeSdk.getPushInstance().registerDevice(token, provider, object : IResultCallback {
       override fun onSuccess() = promise.resolve(null)
       override fun onError(code: String?, error: String?) = promise.reject(code ?: "register_device_error", error)
@@ -144,7 +144,7 @@ class TuyaMessageModule(reactContext: ReactApplicationContext) :
 
   // ---------- Push status ----------
   override fun getPushStatus(promise: Promise) =
-    todo(promise, "getPushStatus") // intended: getPushStatus(IThingResultCallback<PushStatusBean>) — field tổng chưa rõ
+    todo(promise, "getPushStatus") // intended: getPushStatus(IThingResultCallback<PushStatusBean>) - field tổng chưa rõ
   override fun setPushStatus(open: Boolean, promise: Promise) {
     ThingHomeSdk.getPushInstance().setPushStatus(open, boolCb(promise, "set_push_status_error"))
   }

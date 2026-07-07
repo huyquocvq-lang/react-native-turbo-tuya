@@ -1,6 +1,6 @@
 #import "TuyaMatter.h"
 
-// TuyaMatter (iOS) — SKELETON TODO-reject. iOS dùng API HỢP NHẤT ThingSmartActivatorDiscovery (KHÁC Android dedicated)
+// TuyaMatter (iOS) - SKELETON TODO-reject. iOS dùng API HỢP NHẤT ThingSmartActivatorDiscovery (KHÁC Android dedicated)
 // → spec parseSetupCode/connectDevice/commissionDevice LỆCH flow iOS (search→startActive). Cần chỉnh spec trước khi wire sạch.
 // Prereq iOS: + setMatterConfigKey:(appGroupId) + entitlement matter.allow-setup-payload + Bonjour + is_matter_support.
 // Verbatim iOS (intended-call) ở docs/research/tuya-home-sdk-matter-mesh-ios.md §A:
@@ -12,7 +12,7 @@
 //   attestation: continueCommissioningDevice:ignoreAttestationFailure:error: ; stop: stopActive:clearCache:
 static void TuyaTODO(NSString *what, RCTPromiseRejectBlock reject) {
   reject(@"ios_todo",
-         [NSString stringWithFormat:@"iOS '%@' chưa wire — xem docs/research/tuya-home-sdk-device-pairing.md §5.", what],
+         [NSString stringWithFormat:@"iOS '%@' chưa wire - xem docs/research/tuya-home-sdk-device-pairing.md §5.", what],
          nil);
 }
 
@@ -46,7 +46,7 @@ RCT_EXPORT_MODULE()
 - (void)continueCommissioning:(BOOL)ignoreAttestationFailure {}
 - (void)cancelActivator {}
 
-// addListener:/removeListeners: kế thừa từ RCTEventEmitter (TuyaEventEmitter) — không khai lại.
+// addListener:/removeListeners: kế thừa từ RCTEventEmitter (TuyaEventEmitter) - không khai lại.
 
 // ---------- TurboModule boilerplate ----------
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:

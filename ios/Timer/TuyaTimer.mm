@@ -1,15 +1,15 @@
 #import "TuyaTimer.h"
 #import <ThingSmartHomeKit/ThingSmartKit.h>
 
-// TuyaTimer (iOS) — WIRED: getTimerList + removeTimer (ThingSmartTimer, key theo task/bizId/bizType).
+// TuyaTimer (iOS) - WIRED: getTimerList + removeTimer (ThingSmartTimer, key theo task/bizId/bizType).
 // Verbatim: docs/research/tuya-home-sdk-device-control.md (ThingSmartTimer header).
-// TODO: addTimer/updateTimer/updateTimerStatus — chữ ký đầy đủ (time/dps/status/isAppPush) + map inputJson cần verify.
-// ThingSmartTimer KHÔNG có sharedInstance (đã verify header ThingSmartTimerKit) — alloc/init và giữ
+// TODO: addTimer/updateTimer/updateTimerStatus - chữ ký đầy đủ (time/dps/status/isAppPush) + map inputJson cần verify.
+// ThingSmartTimer KHÔNG có sharedInstance (đã verify header ThingSmartTimerKit) - alloc/init và giữ
 // strong ref trong property để request async không bị dealloc/cancel giữa chừng.
-//    removeTimerWithTask xoá theo task (KHÔNG theo timerIds — iOS không expose per-id verbatim).
+//    removeTimerWithTask xoá theo task (KHÔNG theo timerIds - iOS không expose per-id verbatim).
 static void TuyaTODO(NSString *what, RCTPromiseRejectBlock reject) {
   reject(@"ios_todo",
-         [NSString stringWithFormat:@"iOS '%@' chưa wire — xem docs/research/tuya-home-sdk-device-control.md (timer).", what],
+         [NSString stringWithFormat:@"iOS '%@' chưa wire - xem docs/research/tuya-home-sdk-device-control.md (timer).", what],
          nil);
 }
 
@@ -48,7 +48,7 @@ RCT_EXPORT_MODULE()
            timerIds:(NSArray *)timerIds
             resolve:(RCTPromiseResolveBlock)resolve
              reject:(RCTPromiseRejectBlock)reject {
-  // timerIds bỏ qua trên iOS — removeTimerWithTask xoá toàn bộ timer của task/bizId/bizType.
+  // timerIds bỏ qua trên iOS - removeTimerWithTask xoá toàn bộ timer của task/bizId/bizType.
   [self.timer removeTimerWithTask:taskName
                             bizId:bizId
                           bizType:(NSUInteger)bizType.integerValue

@@ -1,7 +1,7 @@
 #import <React/RCTEventEmitter.h>
 
 // Base class cho các TurboModule iOS phát event qua NativeEventEmitter (pattern addListener/
-// removeListeners — KHÔNG dùng codegen EventEmitter type; xem quyết định ở m1-tuya-sdk-library).
+// removeListeners - KHÔNG dùng codegen EventEmitter type; xem quyết định ở m1-tuya-sdk-library).
 // Subclass + override -supportedEvents; gọi [self emit:name body:body] (tương đương Android
 // RCTDeviceEventEmitter.emit). addListener:/removeListeners: do RCTEventEmitter cung cấp sẵn → khớp spec.
 //

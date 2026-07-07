@@ -22,7 +22,7 @@ import com.thingclips.smart.sdk.bean.DeviceBean
 import com.thingclips.smart.sdk.bean.MultiModeActivatorBean
 import com.thingclips.smart.sdk.enums.ActivatorModelEnum
 
-// TuyaPairing — ghép nối Wi-Fi (EZ/AP) + BLE. Phát event onPairingProgress / onBleScan.
+// TuyaPairing - ghép nối Wi-Fi (EZ/AP) + BLE. Phát event onPairingProgress / onBleScan.
 class TuyaPairingModule(reactContext: ReactApplicationContext) :
   NativeTuyaPairingSpec(reactContext) {
 
@@ -64,7 +64,7 @@ class TuyaPairingModule(reactContext: ReactApplicationContext) :
     promise: Promise,
   ) = doWifiPairing(mode, ssid, password, token, timeoutSec, promise)
 
-  // Auto-token: tự getActivatorToken(homeId) rồi chạy EZ/AP — khỏi quản lý token thủ công.
+  // Auto-token: tự getActivatorToken(homeId) rồi chạy EZ/AP - khỏi quản lý token thủ công.
   override fun startWifiPairingAuto(
     homeId: Double,
     mode: String,
@@ -129,7 +129,7 @@ class TuyaPairingModule(reactContext: ReactApplicationContext) :
       .setTimeout(timeoutSec.toLong() * 1000)
       .addScanType(ScanType.SINGLE)
       .build()
-    // object : BleScanResponse (verbatim note) thay trailing-lambda — tránh phụ thuộc SAM-conversion.
+    // object : BleScanResponse (verbatim note) thay trailing-lambda - tránh phụ thuộc SAM-conversion.
     ThingHomeSdk.getBleOperator().startLeScan(setting, object : BleScanResponse {
       override fun onResult(bean: ScanDeviceBean?) {
         // Giữ lại bean gốc để startBlePairing dựng BleActivatorBean(scanBean).
@@ -167,7 +167,7 @@ class TuyaPairingModule(reactContext: ReactApplicationContext) :
     if (scan == null) {
       promise.reject(
         "ble_scan_required",
-        "Chưa có kết quả scan cho uuid=$uuid — gọi startBleScan() trước startBlePairing().",
+        "Chưa có kết quả scan cho uuid=$uuid - gọi startBleScan() trước startBlePairing().",
       )
       return
     }
@@ -196,7 +196,7 @@ class TuyaPairingModule(reactContext: ReactApplicationContext) :
     if (scan == null) {
       promise.reject(
         "ble_scan_required",
-        "Chưa có kết quả scan cho uuid=$uuid — gọi startBleScan() trước startBleWifiPairing().",
+        "Chưa có kết quả scan cho uuid=$uuid - gọi startBleScan() trước startBleWifiPairing().",
       )
       return
     }
@@ -234,7 +234,7 @@ class TuyaPairingModule(reactContext: ReactApplicationContext) :
     ThingHomeSdk.getActivator().newMultiModeActivator().stopActivator(uuid)
   }
 
-  // ---------- P3: pairing nâng cao (unified ActivatorService — package CHƯA verbatim) ----------
+  // ---------- P3: pairing nâng cao (unified ActivatorService - package CHƯA verbatim) ----------
   // SKELETON có chủ đích (như B7 Scene): API hợp nhất ActivatorService/ActivatorMode/Zigbee|QRScanActivator(+Params)/
   // IActivatorListener/IDevice CHƯA lấy verbatim package + note cảnh báo KHÔNG trộn 2 thế hệ → wire trên SDK thật.
   private fun todoPairing(promise: Promise, what: String, intended: String) {

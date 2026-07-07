@@ -2,7 +2,7 @@
 #import <ThingSmartHomeKit/ThingSmartKit.h>
 #import <ThingSmartBusinessExtensionKit/ThingSmartBusinessExtensionKit.h>
 
-// TuyaCore (iOS) — init/destroy SDK. AppKey/AppSecret đọc từ Info.plist
+// TuyaCore (iOS) - init/destroy SDK. AppKey/AppSecret đọc từ Info.plist
 // (ThingSmartAppKey / ThingSmartAppSecret) → startWithAppKey:secretKey: (xem README.md).
 @implementation TuyaCore
 

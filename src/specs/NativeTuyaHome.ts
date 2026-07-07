@@ -1,7 +1,7 @@
 import { TurboModuleRegistry } from 'react-native';
 import type { TurboModule } from 'react-native';
 
-// TurboModule: TuyaHome — quản lý home (app dùng 1 nhà/user) + weather + listeners.
+// TurboModule: TuyaHome - quản lý home (app dùng 1 nhà/user) + weather + listeners.
 // Phát event 'onHomeChange' (home add/remove/invite/info + device/group trong home) → addListener/removeListeners.
 export type HomeResult = {
   homeId: number; // long → number (an toàn < 2^53)
@@ -13,7 +13,7 @@ export type HomeResult = {
   geoName: string;
 };
 
-// 1 thiết bị thuộc home (map từ DeviceBean/ThingSmartDeviceModel) — đủ dùng cho màn device list.
+// 1 thiết bị thuộc home (map từ DeviceBean/ThingSmartDeviceModel) - đủ dùng cho màn device list.
 export type HomeDeviceItem = {
   devId: string;
   name: string;

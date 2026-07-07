@@ -1,7 +1,7 @@
 import { TurboModuleRegistry } from 'react-native';
 import type { TurboModule } from 'react-native';
 
-// TurboModule: TuyaTimer — hẹn giờ / lịch cloud cho device (hoặc group). KHÔNG phát event.
+// TurboModule: TuyaTimer - hẹn giờ / lịch cloud cho device (hoặc group). KHÔNG phát event.
 // inputJson (add/update) = JSON object:
 //   { taskName: string; bizId: string; bizType: 'device'|'group'; time: 'HH:mm'; loops: '1111111' (7 ký tự);
 //     dpsJson: '{"1":true}'; status: boolean; appPush?: boolean; aliasName?: string; timezone?: string }

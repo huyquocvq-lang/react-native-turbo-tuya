@@ -1,8 +1,8 @@
 import { TurboModuleRegistry } from 'react-native';
 import type { TurboModule } from 'react-native';
 
-// TurboModule: TuyaMember — quản lý thành viên home + lời mời + chuyển chủ. KHÔNG phát event.
-// (P3 — dự phòng: app ice-bath 1 home/user thường chỉ cần share điều khiển cho người nhà.)
+// TurboModule: TuyaMember - quản lý thành viên home + lời mời + chuyển chủ. KHÔNG phát event.
+// (P3 - dự phòng: app ice-bath 1 home/user thường chỉ cần share điều khiển cho người nhà.)
 export type Member = {
   memberId: number;
   account: string;

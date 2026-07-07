@@ -1,10 +1,10 @@
 package com.jimmyvu.turbotuya.member
 
-// B12 (P3) theo docs/research/tuya-home-sdk-home-management.md section E + F (verbatim) — CHƯA build-verify.
+// B12 (P3) theo docs/research/tuya-home-sdk-home-management.md section E + F (verbatim) - CHƯA build-verify.
 // ⚠️ WIRE phần callback/param proven (query/remove/update/processInvitation/joinByCode/cancel/updateInvited).
 //    TODO phần cần bean/Biz chưa verbatim: addMember (MemberWrapperBean construction chưa rõ),
 //    createInvitation + getInvitationList (bean InvitationMessageBean field chưa rõ),
-//    transferHomeOwner (Biz FamilyManagerCoreKit — package chưa verbatim).
+//    transferHomeOwner (Biz FamilyManagerCoreKit - package chưa verbatim).
 // ⚠️ Verify import/getter: MemberBean (getMemberId/getAccount/getName/isAdmin/getRole/getHeadPic/getDealStatus/
 //    getInvitationCode/getMobile), IThingGetMemberListCallback.
 
@@ -18,7 +18,7 @@ import com.thingclips.smart.home.sdk.bean.MemberBean
 import com.thingclips.smart.home.sdk.callback.IThingGetMemberListCallback
 import com.thingclips.smart.sdk.api.IResultCallback
 
-// TuyaMember — thành viên home + lời mời + chuyển chủ. Không phát event.
+// TuyaMember - thành viên home + lời mời + chuyển chủ. Không phát event.
 class TuyaMemberModule(reactContext: ReactApplicationContext) :
   NativeTuyaMemberSpec(reactContext) {
 
@@ -27,7 +27,7 @@ class TuyaMemberModule(reactContext: ReactApplicationContext) :
   }
 
   private fun todo(promise: Promise, what: String, why: String) {
-    promise.reject("not_implemented", "$what chưa wire ($why) — xem docs/research/tuya-home-sdk-home-management.md")
+    promise.reject("not_implemented", "$what chưa wire ($why) - xem docs/research/tuya-home-sdk-home-management.md")
   }
 
   private fun result(promise: Promise, errCode: String) = object : IResultCallback {
@@ -86,7 +86,7 @@ class TuyaMemberModule(reactContext: ReactApplicationContext) :
     admin: Boolean,
     promise: Promise,
   ) {
-    // Overload đơn giản: updateMember(memberId, name, admin, IResultCallback) — không đổi role.
+    // Overload đơn giản: updateMember(memberId, name, admin, IResultCallback) - không đổi role.
     ThingHomeSdk.getMemberInstance()
       .updateMember(memberId.toLong(), name, admin, result(promise, "update_member_error"))
   }

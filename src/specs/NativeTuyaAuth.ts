@@ -1,14 +1,14 @@
 import { TurboModuleRegistry } from 'react-native';
 import type { TurboModule } from 'react-native';
 
-// TurboModule: TuyaAuth — đăng ký/đăng nhập (email + third-party) + session + profile.
+// TurboModule: TuyaAuth - đăng ký/đăng nhập (email + third-party) + session + profile.
 // Object type dùng trong Spec phải khai báo NGAY TẠI ĐÂY (codegen không follow import chéo file).
 export type UserResult = {
   uid: string;
   email: string;
   nickName: string;
   sessionId: string;
-  // Profile mở rộng (B3) — native điền nếu có, mặc định '' / 0.
+  // Profile mở rộng (B3) - native điền nếu có, mặc định '' / 0.
   headPic: string;
   mobile: string;
   tempUnit: number; // 1 = Celsius, 2 = Fahrenheit
@@ -25,7 +25,7 @@ export type LoginTerminal = {
 };
 
 export interface Spec extends TurboModule {
-  // Auth: email — type: 1=register, 2=login, 3=reset password, 8=unregister
+  // Auth: email - type: 1=register, 2=login, 3=reset password, 8=unregister
   sendVerifyCode(
     email: string,
     countryCode: string,
@@ -94,7 +94,7 @@ export interface Spec extends TurboModule {
     newPassword: string
   ): Promise<void>;
 
-  // Third-party bind/unbind (CẦN verify chữ ký native — xem note user-account).
+  // Third-party bind/unbind (CẦN verify chữ ký native - xem note user-account).
   bindThirdParty(provider: string, token: string, extraInfo: string): Promise<void>;
   unbindThirdParty(provider: string): Promise<void>;
   getLinkedThirdParties(): Promise<string[]>;

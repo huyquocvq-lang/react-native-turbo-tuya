@@ -1,6 +1,6 @@
 package com.jimmyvu.turbotuya.matter
 
-// B14 (P3) theo docs/research/tuya-home-sdk-device-pairing.md §5 (Matter, verbatim Android) — CHƯA build-verify.
+// B14 (P3) theo docs/research/tuya-home-sdk-device-pairing.md §5 (Matter, verbatim Android) - CHƯA build-verify.
 // SKELETON có chủ đích (như B7/B13): Matter dùng API RIÊNG + nhiều bean native giữ trạng thái giữa các call
 // (SetupPayload, ConnectResult, controllerPtr/devicePtr) + cần init Matter SDK + entitlement (iOS) + KHÔNG obfuscate.
 // Package CHƯA verbatim → TODO-reject + intended-call để wire trên SDK thật. Giữ event plumbing cho tương lai.
@@ -24,7 +24,7 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.WritableMap
 import com.facebook.react.modules.core.DeviceEventManagerModule
 
-// TuyaMatter — pairing Matter (skeleton, API riêng). Phát event onMatterDeviceFound/onMatterAttestation/onMatterError.
+// TuyaMatter - pairing Matter (skeleton, API riêng). Phát event onMatterDeviceFound/onMatterAttestation/onMatterError.
 class TuyaMatterModule(reactContext: ReactApplicationContext) :
   NativeTuyaMatterSpec(reactContext) {
 
@@ -44,7 +44,7 @@ class TuyaMatterModule(reactContext: ReactApplicationContext) :
   private fun todo(promise: Promise, what: String) {
     promise.reject(
       "not_implemented",
-      "$what chưa wire (Matter API riêng chưa verbatim) — xem docs/research/tuya-home-sdk-device-pairing.md §5 + intended-call.",
+      "$what chưa wire (Matter API riêng chưa verbatim) - xem docs/research/tuya-home-sdk-device-pairing.md §5 + intended-call.",
     )
   }
 

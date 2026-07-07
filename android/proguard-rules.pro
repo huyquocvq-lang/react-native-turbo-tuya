@@ -1,4 +1,4 @@
-# Keep rules cho Tuya Smart Life App SDK (consumer proguard — merge vào app).
+# Keep rules cho Tuya Smart Life App SDK (consumer proguard - merge vào app).
 # Theo docs/research/tuya-m1-sdk-foundation.md.
 -keep class com.thingclips.**{*;}
 -dontwarn com.thingclips.**
