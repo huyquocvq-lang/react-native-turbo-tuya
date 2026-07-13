@@ -72,8 +72,18 @@ export type DeviceStatusEvent = {
   dpsJson?: string; // JSON các DP vừa đổi
 };
 export type PairingProgressEvent = {
+  /**
+   * iOS: tên map từ ThingActivatorStep (`device_found` · `device_registered` · `device_initialized` ·
+   * `device_timeout` · `device_state_error` …). Android: chuỗi `onStep()` nguyên văn của SDK.
+   * ⚠️ `device_timeout` / `device_state_error` là LỖI, không phải tiến trình.
+   */
   step: string;
   dataJson?: string;
+  /** iOS: SDK báo lỗi NGAY TRONG callback tiến trình (vd thiết bị không join được Wi-Fi). */
+  errorCode?: string;
+  errorMessage?: string;
+  errorDomain?: string;
+  devId?: string;
 };
 export type BleScanEvent = {
   id: string;
@@ -83,6 +93,14 @@ export type BleScanEvent = {
   mac: string;
   address: string;
   deviceType: number;
+  /** Combo (Wi-Fi + BLE) → cần gửi SSID/pwd khi pair. BLE thuần → pair thẳng. Do native tính. */
+  isCombo?: boolean;
+  /** iOS: ThingSmartBLEType (int). Diagnostics/route. */
+  bleType?: number;
+  /** Android: ScanDeviceBean.configType (vd `config_type_wifi`/`config_type_single`). */
+  configType?: string;
+  /** Android: ScanDeviceBean.providerName. */
+  providerName?: string;
 };
 
 export type SessionExpiredEvent = { reason?: string };

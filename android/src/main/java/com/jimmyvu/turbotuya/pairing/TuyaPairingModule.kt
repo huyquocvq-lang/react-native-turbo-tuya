@@ -1,6 +1,7 @@
 package com.jimmyvu.turbotuya.pairing
 
 import com.jimmyvu.turbotuya.NativeTuyaPairingSpec
+import com.jimmyvu.turbotuya.common.TuyaReject
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
@@ -23,6 +24,10 @@ import com.thingclips.smart.sdk.bean.MultiModeActivatorBean
 import com.thingclips.smart.sdk.enums.ActivatorModelEnum
 
 // TuyaPairing - ghép nối Wi-Fi (EZ/AP) + BLE. Phát event onPairingProgress / onBleScan.
+//
+// LỖI: mọi reject đi qua TuyaReject → shape { code, message, domain } khớp src/errors.ts.
+// `code` LUÔN là mã Tuya thật (onError/onFailure trả về); literal chỉ dùng khi SDK không cho mã nào.
+// Xem dev-workflow/m1-fix-wifi-pairing/.
 class TuyaPairingModule(reactContext: ReactApplicationContext) :
   NativeTuyaPairingSpec(reactContext) {
 
@@ -49,7 +54,7 @@ class TuyaPairingModule(reactContext: ReactApplicationContext) :
       object : IThingActivatorGetToken {
         override fun onSuccess(token: String?) = promise.resolve(token)
         override fun onFailure(code: String?, error: String?) =
-          promise.reject(code ?: "token_error", error)
+          TuyaReject.reject(promise, code ?: "token_error", error ?: "Không lấy được pairing token.")
       },
     )
   }
@@ -79,7 +84,7 @@ class TuyaPairingModule(reactContext: ReactApplicationContext) :
         override fun onSuccess(token: String?) =
           doWifiPairing(mode, ssid, password, token ?: "", timeoutSec, promise)
         override fun onFailure(code: String?, error: String?) =
-          promise.reject(code ?: "token_error", error)
+          TuyaReject.reject(promise, code ?: "token_error", error ?: "Không lấy được pairing token.")
       },
     )
   }
@@ -104,8 +109,9 @@ class TuyaPairingModule(reactContext: ReactApplicationContext) :
       .setListener(object : IThingSmartActivatorListener {
         override fun onActiveSuccess(devResp: DeviceBean?) =
           promise.resolve(deviceToMap(devResp))
+        // `code` = mã Tuya thật (vd "-55" token hết hạn). Literal chỉ dùng khi SDK trả null.
         override fun onError(code: String?, msg: String?) =
-          promise.reject(code ?: "pairing_error", msg)
+          TuyaReject.reject(promise, code ?: "pairing_error", msg ?: "Ghép nối Wi-Fi thất bại.")
         override fun onStep(step: String?, data: Any?) {
           val m = Arguments.createMap()
           m.putString("step", step ?: "")
@@ -134,6 +140,11 @@ class TuyaPairingModule(reactContext: ReactApplicationContext) :
       override fun onResult(bean: ScanDeviceBean?) {
         // Giữ lại bean gốc để startBlePairing dựng BleActivatorBean(scanBean).
         bean?.uuid?.let { scannedBle[it] = bean }
+        // configType (ScanDeviceBean.getConfigType, xác minh bằng javap trên thingsmart 7.5.6):
+        //   config_type_wifi / config_type_wifi_p = combo (cần Wi-Fi); config_type_single/beacon/... = BLE thuần.
+        // → isCombo để JS route (B8/B9). iOS dùng bleType enum; Android dùng chuỗi configType.
+        val configType = bean?.configType ?: ""
+        val isCombo = configType.contains("wifi", ignoreCase = true)
         val m = Arguments.createMap()
         m.putString("id", bean?.id ?: "")
         m.putString("name", bean?.name ?: "")
@@ -142,6 +153,9 @@ class TuyaPairingModule(reactContext: ReactApplicationContext) :
         m.putString("mac", bean?.mac ?: "")
         m.putString("address", bean?.address ?: "")
         m.putDouble("deviceType", (bean?.deviceType ?: 0).toDouble())
+        m.putString("configType", configType)
+        m.putString("providerName", bean?.providerName ?: "")
+        m.putBoolean("isCombo", isCombo)
         emit(EVT_BLE, m)
       }
     })
@@ -165,7 +179,8 @@ class TuyaPairingModule(reactContext: ReactApplicationContext) :
     //    chỉ set homeId vì constructor đã copy productId/uuid/address/deviceType từ scan bean.
     val scan = scannedBle[uuid]
     if (scan == null) {
-      promise.reject(
+      TuyaReject.reject(
+        promise,
         "ble_scan_required",
         "Chưa có kết quả scan cho uuid=$uuid - gọi startBleScan() trước startBlePairing().",
       )
@@ -177,7 +192,7 @@ class TuyaPairingModule(reactContext: ReactApplicationContext) :
       object : IBleActivatorListener {
         override fun onSuccess(deviceBean: DeviceBean?) = promise.resolve(deviceToMap(deviceBean))
         override fun onFailure(code: Int, msg: String?, handle: Any?) =
-          promise.reject(code.toString(), msg)
+          TuyaReject.reject(promise, code.toString(), msg ?: "Ghép nối BLE thất bại.")
       },
     )
   }
@@ -194,7 +209,8 @@ class TuyaPairingModule(reactContext: ReactApplicationContext) :
   ) {
     val scan = scannedBle[uuid]
     if (scan == null) {
-      promise.reject(
+      TuyaReject.reject(
+        promise,
         "ble_scan_required",
         "Chưa có kết quả scan cho uuid=$uuid - gọi startBleScan() trước startBleWifiPairing().",
       )
@@ -219,12 +235,12 @@ class TuyaPairingModule(reactContext: ReactApplicationContext) :
             object : IMultiModeActivatorListener {
               override fun onSuccess(deviceBean: DeviceBean?) = promise.resolve(deviceToMap(deviceBean))
               override fun onFailure(code: Int, msg: String?, handle: Any?) =
-                promise.reject(code.toString(), msg)
+                TuyaReject.reject(promise, code.toString(), msg ?: "Ghép nối BLE+Wi-Fi thất bại.")
             },
           )
         }
         override fun onFailure(code: String?, error: String?) =
-          promise.reject(code ?: "token_error", error)
+          TuyaReject.reject(promise, code ?: "token_error", error ?: "Không lấy được pairing token.")
       },
     )
   }
@@ -238,7 +254,11 @@ class TuyaPairingModule(reactContext: ReactApplicationContext) :
   // SKELETON có chủ đích (như B7 Scene): API hợp nhất ActivatorService/ActivatorMode/Zigbee|QRScanActivator(+Params)/
   // IActivatorListener/IDevice CHƯA lấy verbatim package + note cảnh báo KHÔNG trộn 2 thế hệ → wire trên SDK thật.
   private fun todoPairing(promise: Promise, what: String, intended: String) {
-    promise.reject("not_implemented", "$what chưa wire (unified ActivatorService chưa verbatim). Intended: $intended")
+    TuyaReject.reject(
+      promise,
+      "not_implemented",
+      "$what chưa wire (unified ActivatorService chưa verbatim). Intended: $intended",
+    )
   }
 
   override fun startSubDevicePairing(gatewayDevId: String, timeoutSec: Double) {
