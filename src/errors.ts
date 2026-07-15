@@ -96,6 +96,7 @@ const SDK_CODES: Record<string, TuyaErrorCategory> = {
   '-1402': 'network', // query DP timeout
   '-10001': 'device_offline',
   '-10006': 'device_offline',
+  '65': 'pairing_timeout', // iOS activator timeout (NSError.code 65, message "Timeout") - Wi-Fi EZ/AP không thấy device
   '101': 'network',
   '102': 'network',
   '103': 'ssl_clock',

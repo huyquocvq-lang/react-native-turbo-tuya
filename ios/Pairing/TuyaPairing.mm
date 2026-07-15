@@ -214,7 +214,11 @@ RCT_EXPORT_MODULE()
 // ---------- BLE scan ----------
 - (void)startBleScan:(double)timeoutSec {
   [ThingSmartBLEManager sharedInstance].delegate = self;
-  [[ThingSmartBLEManager sharedInstance] startListeningWithType:ThingBLEScanTypeNoraml cacheStatu:YES];
+  // Dùng startListening:YES (khớp sample chính chủ) thay startListeningWithType:Noraml.
+  // ⚠️ ThingBLEScanType là BITMASK: Noraml(1)/QRCode(2)/AllDevice(4). `Noraml` quá HẸP → bỏ sót thiết bị
+  // combo (Wi-Fi+BLE) mà Smart Life vẫn dò được. startListening: quét mặc định rộng như Smart Life.
+  // (m1-fix-wifi-pairing: sensor combo không hiện ở auto-scan → đây là root cause.)
+  [[ThingSmartBLEManager sharedInstance] startListening:YES];
 }
 
 - (void)stopBleScan {
