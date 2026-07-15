@@ -70,6 +70,12 @@ static NSString *TuyaActivatorStepName(ThingActivatorStep step) {
 }
 
 @interface TuyaPairing () <ThingSmartActivatorDelegate, ThingSmartBLEManagerDelegate, ThingSmartBLEWifiActivatorDelegate>
+- (void)startApWithMode:(ThingActivatorMode)mode
+                   ssid:(NSString *)ssid
+               password:(NSString *)password
+                  token:(NSString *)token
+                regInfo:(nullable NSDictionary *)regInfo
+                timeout:(double)timeoutSec;
 @property (nonatomic, copy) RCTPromiseResolveBlock wifiResolve;
 @property (nonatomic, copy) RCTPromiseRejectBlock wifiReject;
 @property (nonatomic, copy) RCTPromiseResolveBlock comboResolve;
@@ -101,6 +107,11 @@ RCT_EXPORT_MODULE()
 }
 
 // ---------- Wi-Fi pairing (EZ/AP, kết quả qua delegate) ----------
+//
+// ⚠️ `ssid`/`password` LUÔN là của ROUTER (Wi-Fi nhà), KHÔNG phải hotspot `SmartLife…` do thiết bị
+// phát ra. Header nói thẳng: "ssid: Name of route. password: Password of route."
+// Việc nối điện thoại vào hotspot thiết bị là thao tác RIÊNG của user (AP mode), không liên quan
+// tới 2 tham số này. Nhầm chỗ này = pair fail 100% mà lỗi trả về không hé lộ gì.
 - (void)doWifiPairingMode:(NSString *)mode
                      ssid:(NSString *)ssid
                  password:(NSString *)password
@@ -110,12 +121,60 @@ RCT_EXPORT_MODULE()
                    reject:(RCTPromiseRejectBlock)reject {
   self.wifiResolve = resolve;
   self.wifiReject = reject;
-  ThingActivatorMode m = [mode.uppercaseString isEqualToString:@"AP"] ? ThingActivatorModeAP : ThingActivatorModeEZ;
+  BOOL isAp = [mode.uppercaseString isEqualToString:@"AP"];
+  ThingActivatorMode m = isAp ? ThingActivatorModeAP : ThingActivatorModeEZ;
   [ThingSmartActivator sharedInstance].delegate = self;
-  [[ThingSmartActivator sharedInstance] startConfigWiFi:m
+
+  // EZ: doc EZ chỉ dùng biến thể KHÔNG có regInfo → giữ nguyên, đừng thêm thứ doc không yêu cầu.
+  if (!isAp) {
+    [[ThingSmartActivator sharedInstance] startConfigWiFi:m
+                                                     ssid:ssid
+                                                 password:password
+                                                    token:token
+                                                  timeout:timeoutSec];
+    return;
+  }
+
+  // AP (legacy): doc quy định 3 bước — token → getDeviceSecurityConfigs → startConfigWiFi(regInfo).
+  // Trước đây mình BỎ QUA bước security config và gọi thẳng biến thể không regInfo.
+  // Signature verify verbatim từ header SDK thật (Pods/ThingSmartActivatorCoreKit/.../ThingSmartActivator.h:130-138):
+  //   - (void)getDeviceSecurityConfigs:(ThingSuccessDict)success failure:(ThingFailureError)failure;
+  //   - (void)startConfigWiFi:(ThingActivatorMode)mode ssid: password: token: regInfo:(nullable NSDictionary *) timeout:;
+  __weak typeof(self) weakSelf = self;
+  [[ThingSmartActivator sharedInstance] getDeviceSecurityConfigs:^(NSDictionary *result) {
+    [weakSelf startApWithMode:m ssid:ssid password:password token:token regInfo:result timeout:timeoutSec];
+  } failure:^(NSError *error) {
+    // `regInfo` là nullable ⇒ KHÔNG chặn pairing khi lookup hỏng: thiết bị không cần security config
+    // vẫn pair được bình thường. Chỉ emit để diagnostics phân biệt "không có config" vs "lỗi khác".
+    //
+    // ⚠️ Tên step CỐ Ý không chứa "fail"/"error", và CỐ Ý không set errorCode/errorMessage:
+    //   · `isFailureStep()` (JS) khớp lỏng theo chuỗi fail/error ⇒ tên có "fail" sẽ bị xếp nhầm
+    //     thành LỖI, trong khi đây là ca lành tính vẫn chạy tiếp.
+    //   · set error* sẽ kích `setStepError` ⇒ UI hiện lỗi đỏ cho một thứ không phải lỗi, và nếu
+    //     sau đó pair fail vì lý do KHÁC thì nó lại đổ tội nhầm chỗ này.
+    // Chi tiết nhét vào dataJson (đã được đưa vào log chẩn đoán) - đủ để truy vết.
+    [weakSelf emit:@"onPairingProgress" body:@{
+      @"step": @"sdk.security_configs_skipped",
+      @"dataJson": [NSString stringWithFormat:@"regInfo=nil; code=%@; message=%@",
+                    error ? [@(error.code) stringValue] : @"?",
+                    error.localizedDescription ?: @"(SDK không trả chi tiết)"],
+    }];
+    [weakSelf startApWithMode:m ssid:ssid password:password token:token regInfo:nil timeout:timeoutSec];
+  }];
+}
+
+// Tách riêng để 2 nhánh (có/không lấy được security config) dùng chung đúng một đường gọi.
+- (void)startApWithMode:(ThingActivatorMode)mode
+                   ssid:(NSString *)ssid
+               password:(NSString *)password
+                  token:(NSString *)token
+                regInfo:(nullable NSDictionary *)regInfo
+                timeout:(double)timeoutSec {
+  [[ThingSmartActivator sharedInstance] startConfigWiFi:mode
                                                    ssid:ssid
                                                password:password
                                                   token:token
+                                                regInfo:regInfo
                                                 timeout:timeoutSec];
 }
 
