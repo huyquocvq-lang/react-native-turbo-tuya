@@ -140,7 +140,9 @@ RCT_EXPORT_MODULE()
   // Signature verify verbatim từ header SDK thật (Pods/ThingSmartActivatorCoreKit/.../ThingSmartActivator.h:130-138):
   //   - (void)getDeviceSecurityConfigs:(ThingSuccessDict)success failure:(ThingFailureError)failure;
   //   - (void)startConfigWiFi:(ThingActivatorMode)mode ssid: password: token: regInfo:(nullable NSDictionary *) timeout:;
-  __weak typeof(self) weakSelf = self;
+  // Dùng thẳng tên class thay `typeof(self)`: `typeof` là GNU extension, ở chế độ biên dịch ObjC++ này
+  // clang không nhận (báo "Expected unqualified-id") ⇒ khai báo weakSelf hỏng. `__weak TuyaPairing *` luôn OK.
+  __weak TuyaPairing *weakSelf = self;
   [[ThingSmartActivator sharedInstance] getDeviceSecurityConfigs:^(NSDictionary *result) {
     [weakSelf startApWithMode:m ssid:ssid password:password token:token regInfo:result timeout:timeoutSec];
   } failure:^(NSError *error) {
