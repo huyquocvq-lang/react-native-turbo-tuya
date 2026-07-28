@@ -100,15 +100,80 @@ RCT_EXPORT_MODULE()
   ThingSmartDevice *dev = [ThingSmartDevice deviceWithDeviceId:devId];
   if (!dev) { reject(@"no_device", @"Không tìm thấy thiết bị", nil); return; }
   ThingSmartDeviceModel *m = dev.deviceModel;
-  // iOS ThingSmartDeviceModel: dps/productId/isOnline. isLocalOnline + schema/dpCodes serialize chưa wire → để rỗng.
+
+  // schemaArray (ThingSmartSchemaModel: dpId/code/name/mode/type/property) → dựng 2 thứ app cần:
+  //   · dpCodes {dpId: code} → JS resolve DP theo CODE chuẩn thay vì hardcode id (services/dp.ts).
+  //   · schema đầy đủ kèm property (min/max/step/scale/unit) → render đúng biên (services/deviceSchema.ts).
+  // Trước đây cả hai trả rỗng ⇒ JS luôn rơi về DP placeholder ⇒ map sai DP với bồn thật.
+  NSMutableDictionary *dpCodes = [NSMutableDictionary dictionary];
+  NSMutableArray *schema = [NSMutableArray array];
+  for (ThingSmartSchemaModel *s in m.schemaArray) {
+    if (s.dpId.length > 0 && s.code.length > 0) dpCodes[s.dpId] = s.code;
+    NSMutableDictionary *entry = [@{
+      @"dpId": s.dpId ?: @"",
+      @"code": s.code ?: @"",
+      @"name": s.name ?: @"",
+      @"mode": s.mode ?: @"", // ro / rw / wr
+      @"type": s.type ?: @"",
+    } mutableCopy];
+    ThingSmartSchemaPropertyModel *p = s.property;
+    if (p) {
+      entry[@"property"] = @{
+        @"type": p.type ?: @"",
+        @"unit": p.unit ?: @"",
+        @"min": @(p.min),
+        @"max": @(p.max),
+        @"step": @(p.step),
+        @"scale": @(p.scale),
+        @"range": p.range ?: @[],
+        @"label": p.label ?: @[],
+      };
+    }
+    [schema addObject:entry];
+  }
+
+  // Toàn bộ thông tin model SDK trả về - CHỈ để log/chẩn đoán (JS in ra, không dùng cho logic).
+  NSDictionary *raw = @{
+    @"devId": m.devId ?: @"",
+    @"name": m.name ?: @"",
+    @"iconUrl": m.iconUrl ?: @"",
+    @"productId": m.productId ?: @"",
+    @"productVer": m.productVer ?: @"",
+    @"verSw": m.verSw ?: @"",
+    @"uuid": m.uuid ?: @"",
+    @"mac": m.mac ?: @"",
+    @"gwType": m.gwType ?: @"",
+    @"runtimeEnv": m.runtimeEnv ?: @"",
+    @"timezoneId": m.timezoneId ?: @"",
+    @"isOnline": @(m.isOnline),
+    @"isCloudOnline": @(m.isCloudOnline),
+    @"isLocalOnline": @(m.isLocalOnline),
+    @"isShare": @(m.isShare),
+    @"supportGroup": @(m.supportGroup),
+    @"homeId": @(m.homeId),
+    @"roomId": @(m.roomId),
+    @"capability": @(m.capability),
+    @"attribute": @(m.attribute),
+    @"ability": @(m.ability),
+    @"pv": @(m.pv),
+    @"lpv": @(m.lpv),
+    @"bv": @(m.bv),
+    @"dps": m.dps ?: @{},
+    @"dpsTime": m.dpsTime ?: @{},
+    @"dpName": m.dpName ?: @{},
+    @"schemaCount": @(m.schemaArray.count),
+  };
+
   resolve(@{
     @"devId": m.devId ?: devId,
     @"productId": m.productId ?: @"",
     @"dpsJson": TuyaJson(m.dps ?: @{}),
     @"isOnline": @(m.isOnline),
-    @"isLocalOnline": @(m.isOnline),
-    @"schemaJson": @"",
-    @"dpCodesJson": @"",
+    @"isLocalOnline": @(m.isLocalOnline),
+    // schemaArray rỗng (hiếm) → rơi về chuỗi schema thô của SDK, đừng trả rỗng.
+    @"schemaJson": schema.count > 0 ? TuyaJson(schema) : (m.schema ?: @""),
+    @"dpCodesJson": TuyaJson(dpCodes),
+    @"rawJson": TuyaJson(raw),
   });
 }
 

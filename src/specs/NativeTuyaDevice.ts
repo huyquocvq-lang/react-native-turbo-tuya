@@ -9,8 +9,10 @@ export type DeviceSnapshot = {
   dpsJson: string; // {"<dpId>": value}
   isOnline: boolean; // LAN hoặc cloud
   isLocalOnline: boolean; // chỉ LAN
-  schemaJson: string; // định nghĩa kiểu DP (raw)
+  schemaJson: string; // định nghĩa DP: [{dpId, code, name, mode, type, property:{min,max,step,scale,unit,range}}]
   dpCodesJson: string; // map dpId<->code (standard instruction set)
+  /** Toàn bộ thông tin device model SDK trả về (name/mac/verSw/homeId/dpsTime/...) - CHỈ để log/chẩn đoán. */
+  rawJson?: string;
 };
 
 export interface Spec extends TurboModule {
