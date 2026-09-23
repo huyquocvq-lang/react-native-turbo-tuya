@@ -1,17 +1,15 @@
 #import "TuyaTimer.h"
 #import <ThingSmartHomeKit/ThingSmartKit.h>
 
-// TuyaTimer (iOS) - WIRED: addTimer + getTimerList + removeTimer (ThingSmartTimer, key theo task/bizId/bizType).
-// Verbatim: docs/research/tuya-home-sdk-device-control.md (ThingSmartTimer header).
-// TODO: updateTimer/updateTimerStatus - chữ ký đầy đủ + map inputJson cần verify.
-// ThingSmartTimer KHÔNG có sharedInstance (đã verify header ThingSmartTimerKit) - alloc/init và giữ
-// strong ref trong property để request async không bị dealloc/cancel giữa chừng.
-//    removeTimerWithTask xoá theo task (KHÔNG theo timerIds - iOS không expose per-id verbatim).
-static void TuyaTODO(NSString *what, RCTPromiseRejectBlock reject) {
-  reject(@"ios_todo",
-         [NSString stringWithFormat:@"iOS '%@' chưa wire - xem docs/research/tuya-home-sdk-device-control.md (timer).", what],
-         nil);
-}
+// TuyaTimer (iOS) - WIRED ĐỦ: addTimer · updateTimer · getTimerList · removeTimer · updateTimerStatus.
+// Chữ ký lấy VERBATIM từ header SDK thật: Pods/ThingSmartTimerKit/…/Headers/ThingSmartTimer.h (7.5.x).
+// ThingSmartTimer KHÔNG có sharedInstance (đã verify header) - alloc/init và giữ strong ref trong property
+// để request async không bị dealloc/cancel giữa chừng.
+//
+// Hợp đồng với JS (dùng chung với Android): thao tác theo TASK NAME; `timerIds` RỖNG = áp dụng cho CẢ TASK.
+//   - removeTimer          → removeTimerWithTask (xoá cả task; iOS cũng có per-id nhưng JS chưa cần)
+//   - updateTimerStatus    → timerIds rỗng: updateTimerTaskStatusWithTask ; có id: updateTimerStatusWithTimerIds
+//   - `loops`: 7 ký tự, TRÁI→PHẢI = **Chủ Nhật → Thứ Bảy** (header nói rõ: "0100000 means every Monday").
 
 static NSString *TuyaJsonStr(id obj) {
   if (![obj isKindOfClass:[NSDictionary class]]) return @"{}";
@@ -38,6 +36,26 @@ static BOOL TuyaBool(id v, BOOL fallback) {
 // Hợp đồng JS dùng 'device' | 'group'; SDK nhận 0 = device, 1 = group.
 static NSUInteger TuyaBizType(id bizType) {
   return [TuyaStr(bizType, @"device").lowercaseString isEqualToString:@"group"] ? 1 : 0;
+}
+
+// Hợp đồng JS dùng 'open' | 'close' | 'delete'; SDK nhận updateType - verbatim header:
+// "`0`: disables the timer. `1`: enables the timer. `2`: deletes the timer."
+// Mặc định về DELETE (giống Android `updateOp`) để op lạ không vô tình BẬT một lịch người dùng đã tắt.
+static NSUInteger TuyaTimerUpdateType(NSString *op) {
+  NSString *s = [TuyaStr(op, @"") lowercaseString];
+  if ([s isEqualToString:@"open"]) return 1;
+  if ([s isEqualToString:@"close"]) return 0;
+  return 2;
+}
+
+/** Chỉ giữ phần tử là NSString khác rỗng - mảng từ JS có thể lẫn null/số. */
+static NSArray<NSString *> *TuyaTimerIds(NSArray *raw) {
+  NSMutableArray<NSString *> *out = [NSMutableArray array];
+  for (id v in raw ?: @[]) {
+    NSString *s = TuyaStr(v, @"");
+    if (s.length > 0) [out addObject:s];
+  }
+  return out;
 }
 
 @interface TuyaTimer ()
@@ -81,10 +99,32 @@ RCT_EXPORT_MODULE()
                        failure:^(NSError *e) { reject(@"add_timer_error", e.localizedDescription, e); }];
 }
 
+// Sửa MỘT timer đã có (theo timerId). inputJson giống `addTimer` nhưng KHÔNG cần taskName - timer đã
+// thuộc task của nó rồi; đổi task thì phải xoá và tạo lại.
 - (void)updateTimer:(NSString *)timerId
           inputJson:(NSString *)inputJson
             resolve:(RCTPromiseResolveBlock)resolve
-             reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"updateTimer", reject); }
+             reject:(RCTPromiseRejectBlock)reject {
+  NSDictionary *in = TuyaJsonDict(inputJson);
+  NSString *bizId = TuyaStr(in[@"bizId"], @"");
+  NSString *time = TuyaStr(in[@"time"], @"");
+  NSDictionary *dps = TuyaJsonDict(in[@"dpsJson"]);
+  if (timerId.length == 0 || bizId.length == 0 || time.length == 0 || dps.count == 0) {
+    reject(@"invalid_param", @"updateTimer cần timerId, bizId, time và dpsJson khác rỗng", nil);
+    return;
+  }
+  [self.timer updateTimerWithTimerId:timerId
+                               loops:TuyaStr(in[@"loops"], @"0000000")
+                               bizId:bizId
+                             bizType:TuyaBizType(in[@"bizType"])
+                                time:time
+                                 dps:dps
+                              status:TuyaBool(in[@"status"], YES)
+                           isAppPush:TuyaBool(in[@"appPush"], NO)
+                           aliasName:TuyaStr(in[@"aliasName"], @"")
+                             success:^{ resolve(nil); }
+                             failure:^(NSError *e) { reject(@"update_timer_error", e.localizedDescription, e); }];
+}
 
 - (void)removeTimer:(NSString *)taskName
               bizId:(NSString *)bizId
@@ -124,13 +164,47 @@ RCT_EXPORT_MODULE()
   } failure:^(NSError *e) { reject(@"timer_list_error", e.localizedDescription, e); }];
 }
 
+// Bật / tắt / xoá timer mà KHÔNG phải xoá rồi tạo lại (giữ nguyên giờ + thứ đã đặt).
+// timerIds rỗng ⇒ áp dụng cho cả task (đúng hợp đồng với Android `updateCategoryTimerStatus`).
 - (void)updateTimerStatus:(NSString *)taskName
                     bizId:(NSString *)bizId
                   bizType:(NSString *)bizType
                  timerIds:(NSArray *)timerIds
                        op:(NSString *)op
                   resolve:(RCTPromiseResolveBlock)resolve
-                   reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"updateTimerStatus", reject); }
+                   reject:(RCTPromiseRejectBlock)reject {
+  NSArray<NSString *> *ids = TuyaTimerIds(timerIds);
+  NSUInteger updateType = TuyaTimerUpdateType(op);
+  NSUInteger biz = TuyaBizType(bizType);
+  if (bizId.length == 0) {
+    reject(@"invalid_param", @"updateTimerStatus cần bizId", nil);
+    return;
+  }
+  void (^ok)(void) = ^{ resolve(nil); };
+  void (^fail)(NSError *) = ^(NSError *e) {
+    reject(@"update_timer_status_error", e.localizedDescription, e);
+  };
+
+  if (ids.count == 0) {
+    if (taskName.length == 0) {
+      reject(@"invalid_param", @"updateTimerStatus cần taskName khi không truyền timerIds", nil);
+      return;
+    }
+    [self.timer updateTimerTaskStatusWithTask:taskName
+                                        bizId:bizId
+                                      bizType:biz
+                                   updateType:updateType
+                                      success:ok
+                                      failure:fail];
+    return;
+  }
+  [self.timer updateTimerStatusWithTimerIds:ids
+                                      bizId:bizId
+                                    bizType:biz
+                                 updateType:(int)updateType
+                                    success:ok
+                                    failure:fail];
+}
 
 // ---------- TurboModule boilerplate ----------
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:
