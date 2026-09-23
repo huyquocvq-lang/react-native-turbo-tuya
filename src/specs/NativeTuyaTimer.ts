@@ -9,7 +9,9 @@ import type { TurboModule } from 'react-native';
 export type TimerItem = {
   timerId: string;
   time: string; // 'HH:mm'
-  loops: string; // 7 ký tự (T2..CN); '0000000'=một lần, '1111111'=hằng ngày
+  // 7 ký tự, TRÁI→PHẢI = Chủ Nhật → Thứ Bảy (doc Tuya "Scheduled Tasks"); '0000000'=một lần,
+  // '1111111'=hằng ngày. ⚠️ KHÔNG phải T2..CN - khớp thẳng với `Date.getDay()` của JS.
+  loops: string;
   status: boolean;
   dpsJson: string;
   aliasName: string;
