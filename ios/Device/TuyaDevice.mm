@@ -1,11 +1,11 @@
 #import "TuyaDevice.h"
 #import <ThingSmartHomeKit/ThingSmartKit.h>
 
-// TuyaDevice (iOS) - WIRED: DP control (publishDps + mode), snapshot/getDps/online, rename/remove, and the
-// status listener (ThingSmartDeviceDelegate device:dpsUpdate:/deviceInfoUpdate: → emit onDeviceStatus).
+// TuyaDevice (iOS) - WIRED: DP control (publishDps + mode + awaitAck), snapshot/getDps/online, rename/remove,
+// and the status listener (ThingSmartDeviceDelegate device:dpsUpdate:/deviceInfoUpdate: → emit onDeviceStatus).
 // Verbatim: docs/research/tuya-home-sdk-device-control.md (section iOS).
 // TODO (selector/feature chưa verbatim trên iOS): queryDp, isCloudConnected, resetFactory, getWifiSignal,
-//   publishDpsWithChannels, publishDpsAwaitAck, sendCacheDps, bleConnect/bleDisconnect/isBleLocalOnline.
+//   publishDpsWithChannels, sendCacheDps, bleConnect/bleDisconnect/isBleLocalOnline.
 static void TuyaTODO(NSString *what, RCTPromiseRejectBlock reject) {
   reject(@"ios_todo",
          [NSString stringWithFormat:@"iOS '%@' chưa wire - xem docs/research/tuya-home-sdk-device-control.md.", what],
@@ -24,6 +24,30 @@ static NSString *TuyaJson(id obj) {
   NSData *d = [NSJSONSerialization dataWithJSONObject:obj options:0 error:nil];
   return d ? [[NSString alloc] initWithData:d encoding:NSUTF8StringEncoding] : @"{}";
 }
+
+// timeoutMs <= 0 từ JS → dùng mức này (khớp DEFAULT_ACK_TIMEOUT của Android).
+static const double kTuyaDefaultAckTimeoutMs = 8000;
+
+// Chờ ack cho publishDpsAwaitAck. Nghe dpsUpdate trên một ThingSmartDevice RIÊNG (như Android dùng
+// newDeviceInstance riêng) nên không đè delegate của listener bền ở registerDeviceListener: mỗi instance
+// tự nhận notification DP của SDK. `delegate` của ThingSmartDevice là weak ⇒ waiter giữ device, còn
+// block publish/timeout giữ waiter tới khi settle.
+@interface TuyaDpsAckWaiter : NSObject <ThingSmartDeviceDelegate>
+@property (nonatomic, strong) ThingSmartDevice *device;
+@property (nonatomic, copy) NSSet<NSString *> *dpIds; // rỗng ⇒ update nào cũng tính là ack (như Android)
+@property (nonatomic, copy) void (^onAck)(void);
+@end
+
+@implementation TuyaDpsAckWaiter
+// CHỈ implement bản không dpsTime: header ghi rõ có `device:dpsUpdate:dpsTime:` thì SDK bỏ qua bản này.
+- (void)device:(ThingSmartDevice *)device dpsUpdate:(NSDictionary *)dps {
+  BOOL matched = self.dpIds.count == 0;
+  for (id key in dps) {
+    if ([self.dpIds containsObject:[NSString stringWithFormat:@"%@", key]]) { matched = YES; break; }
+  }
+  if (matched && self.onAck) { self.onAck(); }
+}
+@end
 
 @interface TuyaDevice () <ThingSmartDeviceDelegate>
 // Giữ instance có delegate để nhận dpsUpdate; gỡ ở unregister/invalidate.
@@ -75,11 +99,54 @@ RCT_EXPORT_MODULE()
                        resolve:(RCTPromiseResolveBlock)resolve
                         reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"publishDpsWithChannels", reject); }
 
+// Resolve khi dpsUpdate KHỚP dpId vừa publish (success của publishDps chỉ = "đã gửi"). Mirror Android.
 - (void)publishDpsAwaitAck:(NSString *)devId
                    dpsJson:(NSString *)dpsJson
                  timeoutMs:(double)timeoutMs
                    resolve:(RCTPromiseResolveBlock)resolve
-                    reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"publishDpsAwaitAck", reject); }
+                    reject:(RCTPromiseRejectBlock)reject {
+  ThingSmartDevice *dev = [ThingSmartDevice deviceWithDeviceId:devId];
+  if (!dev) { reject(@"no_device", @"Không tìm thấy thiết bị", nil); return; }
+  NSDictionary *dps = TuyaParseDps(dpsJson);
+  NSMutableSet<NSString *> *dpIds = [NSMutableSet set];
+  for (id key in dps) { [dpIds addObject:[NSString stringWithFormat:@"%@", key]]; }
+  double timeout = timeoutMs > 0 ? timeoutMs : kTuyaDefaultAckTimeoutMs;
+
+  TuyaDpsAckWaiter *waiter = [TuyaDpsAckWaiter new];
+  waiter.device = dev;
+  waiter.dpIds = dpIds;
+
+  // Mọi nhánh (ack / publish lỗi / timeout) settle trên main queue ⇒ cờ `settled` không cần lock.
+  // `holder` giữ waiter sống tới lúc settle rồi thả ra - phá vòng giữ waiter → onAck → settle → waiter.
+  __block BOOL settled = NO;
+  __block TuyaDpsAckWaiter *holder = waiter;
+  void (^settle)(dispatch_block_t) = ^(dispatch_block_t finish) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+      if (settled) { return; }
+      settled = YES;
+      holder.device.delegate = nil;
+      holder = nil;
+      finish();
+    });
+  };
+  waiter.onAck = ^{ settle(^{ resolve(nil); }); };
+
+  dispatch_async(dispatch_get_main_queue(), ^{
+    dev.delegate = waiter; // gắn TRƯỚC khi publish để không lỡ echo về nhanh
+    [dev publishDps:dps
+            success:^{ /* chờ dpsUpdate */ }
+            failure:^(NSError *e) {
+              settle(^{ reject(@"publish_dps_error", e.localizedDescription, e); });
+            }];
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(timeout * NSEC_PER_MSEC)),
+                   dispatch_get_main_queue(), ^{
+      settle(^{
+        reject(@"ack_timeout",
+               [NSString stringWithFormat:@"Không nhận dpsUpdate trong %.0fms", timeout], nil);
+      });
+    });
+  });
+}
 
 - (void)getDps:(NSString *)devId
        resolve:(RCTPromiseResolveBlock)resolve
