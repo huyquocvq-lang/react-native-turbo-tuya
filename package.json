@@ -48,16 +48,17 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/drakenvu/cool-bath.git"
+    "url": "git+https://github.com/drakenvu/react-native-turbo-tuya.git"
   },
   "author": "drakenvu <huyrambo2k@gmail.com> (https://github.com/drakenvu)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/drakenvu/cool-bath/issues"
+    "url": "https://github.com/drakenvu/react-native-turbo-tuya/issues"
   },
-  "homepage": "https://github.com/drakenvu/cool-bath#readme",
+  "homepage": "https://github.com/drakenvu/react-native-turbo-tuya#readme",
   "publishConfig": {
-    "registry": "https://registry.npmjs.org/"
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
   },
   "devDependencies": {
     "@commitlint/config-conventional": "^21.0.2",
