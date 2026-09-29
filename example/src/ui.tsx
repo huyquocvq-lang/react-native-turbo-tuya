@@ -17,9 +17,14 @@ let _seq = 0;
 
 export function useConsole() {
   const [lines, setLines] = useState<LogLine[]>([]);
-  const push = useCallback((tag: string, text: string, kind: LogKind = 'in') => {
-    setLines((prev) => [{ id: ++_seq, tag, text, kind }, ...prev].slice(0, 200));
-  }, []);
+  const push = useCallback(
+    (tag: string, text: string, kind: LogKind = 'in') => {
+      setLines((prev) =>
+        [{ id: ++_seq, tag, text, kind }, ...prev].slice(0, 200)
+      );
+    },
+    []
+  );
   const clear = useCallback(() => setLines([]), []);
   return { lines, push, clear };
 }
@@ -164,14 +169,21 @@ export function Console({
           </Text>
         ))}
         {lines.length === 0 ? (
-          <Text style={styles.logMuted}>No output yet - tap an action above.</Text>
+          <Text style={styles.logMuted}>
+            No output yet - tap an action above.
+          </Text>
         ) : null}
       </ScrollView>
     </View>
   );
 }
 
-const PREFIX: Record<LogKind, string> = { in: '▶', ok: '✓', err: '✗', evt: '◆' };
+const PREFIX: Record<LogKind, string> = {
+  in: '▶',
+  ok: '✓',
+  err: '✗',
+  evt: '◆',
+};
 const COLOR: Record<LogKind, object> = {
   in: { color: '#9aa' },
   ok: { color: '#3fbf6f' },
@@ -183,7 +195,12 @@ const styles = StyleSheet.create({
   section: { marginBottom: 14 },
   sectionTitle: { fontSize: 15, fontWeight: '700', color: '#16324f' },
   sectionSub: { fontSize: 11, color: '#7a8', marginBottom: 6 },
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'flex-end' },
+  row: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    alignItems: 'flex-end',
+  },
   field: { gap: 2 },
   fieldLabel: { fontSize: 11, color: '#567' },
   input: {
@@ -201,7 +218,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  btnGhost: { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#cdd' },
+  btnGhost: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#cdd',
+  },
   btnWarn: { backgroundColor: '#d1453b' },
   btnPressed: { opacity: 0.6 },
   btnText: { color: '#fff', fontWeight: '600', fontSize: 13 },

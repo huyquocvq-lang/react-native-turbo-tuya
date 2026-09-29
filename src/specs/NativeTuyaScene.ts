@@ -58,7 +58,10 @@ export interface Spec extends TurboModule {
   executeScene(homeId: number, sceneId: string): Promise<void>; // tap-to-run
   enableAutomation(sceneId: string): Promise<boolean>;
   disableAutomation(sceneId: string): Promise<boolean>;
-  enableAutomationWithTime(sceneId: string, durationMs: number): Promise<boolean>; // Android-only
+  enableAutomationWithTime(
+    sceneId: string,
+    durationMs: number
+  ): Promise<boolean>; // Android-only
 
   // --- Builders (native build condition/action → trả JSON nạp vào saveScene) ---
   // op (toán tử): '==' | '<' | '>' | '<=' | '>=' (KHÔNG dùng tên 'operator' - keyword C++/ObjC++).
@@ -89,16 +92,17 @@ export interface Spec extends TurboModule {
     radius: number,
     title: string
   ): Promise<string>;
-  buildDeviceAction(devId: string, dpId: string, value: string): Promise<string>;
+  buildDeviceAction(
+    devId: string,
+    dpId: string,
+    value: string
+  ): Promise<string>;
   buildDelayAction(
     hours: number,
     minutes: number,
     seconds: number
   ): Promise<string>;
-  buildTriggerSceneAction(
-    sceneId: string,
-    sceneName: string
-  ): Promise<string>;
+  buildTriggerSceneAction(sceneId: string, sceneName: string): Promise<string>;
   buildAutomationToggleAction(
     sceneId: string,
     enable: boolean

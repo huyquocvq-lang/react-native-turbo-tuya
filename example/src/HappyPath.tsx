@@ -17,7 +17,12 @@ const STEPS: { key: string; label: string }[] = [
   { key: 'settemp', label: 'Set target temperature' },
 ];
 
-const ICON: Record<StepStatus, string> = { idle: '○', running: '◐', ok: '●', err: '✕' };
+const ICON: Record<StepStatus, string> = {
+  idle: '○',
+  running: '◐',
+  ok: '●',
+  err: '✕',
+};
 const STATUS_COLOR: Record<StepStatus, string> = {
   idle: '#9aa',
   running: '#d9a441',
@@ -53,10 +58,14 @@ export function HappyPath({ d }: { d: DemoCtx }) {
     setRunning(true);
     try {
       await step('init', () => Tuya.initSdk());
-      await step('login', () => Tuya.loginWithEmail(d.countryCode, d.email, d.password));
+      await step('login', () =>
+        Tuya.loginWithEmail(d.countryCode, d.email, d.password)
+      );
       const home = await step('home', async () => {
         const list = await Tuya.getHomeList();
-        return list.length ? list[0]! : Tuya.createHome(d.homeName, 0, 0, '', []);
+        return list.length
+          ? list[0]!
+          : Tuya.createHome(d.homeName, 0, 0, '', []);
       });
       const homeId = home.homeId;
       d.setHomeId(String(homeId));
@@ -69,7 +78,10 @@ export function HappyPath({ d }: { d: DemoCtx }) {
       d.setDevId(devId);
       await step('snapshot', () => Tuya.getDeviceSnapshot(devId));
       await step('settemp', () =>
-        Tuya.publishDps(devId, JSON.stringify({ [d.dpId]: Number(d.targetTemp) }))
+        Tuya.publishDps(
+          devId,
+          JSON.stringify({ [d.dpId]: Number(d.targetTemp) })
+        )
       );
     } catch {
       // step() already recorded the failure + logged it; chain stops here.
@@ -80,14 +92,53 @@ export function HappyPath({ d }: { d: DemoCtx }) {
 
   return (
     <View>
-      <Section title="Happy path" subtitle="Init → Login → Home → Token → Pair → Snapshot → Set temp">
-        <Field label="Country" value={d.countryCode} onChangeText={d.setCountryCode} width={80} numeric />
-        <Field label="Email" value={d.email} onChangeText={d.setEmail} width={200} placeholder="you@mail.com" />
-        <Field label="Password" value={d.password} onChangeText={d.setPassword} secure />
-        <Field label="SSID (2.4G)" value={d.ssid} onChangeText={d.setSsid} width={160} />
-        <Field label="Wi-Fi pwd" value={d.wifiPassword} onChangeText={d.setWifiPassword} secure />
-        <Field label="Target °C" value={d.targetTemp} onChangeText={d.setTargetTemp} width={90} numeric />
-        <Btn title={running ? 'Running…' : 'Run happy path'} onPress={running ? () => {} : runAll} />
+      <Section
+        title="Happy path"
+        subtitle="Init → Login → Home → Token → Pair → Snapshot → Set temp"
+      >
+        <Field
+          label="Country"
+          value={d.countryCode}
+          onChangeText={d.setCountryCode}
+          width={80}
+          numeric
+        />
+        <Field
+          label="Email"
+          value={d.email}
+          onChangeText={d.setEmail}
+          width={200}
+          placeholder="you@mail.com"
+        />
+        <Field
+          label="Password"
+          value={d.password}
+          onChangeText={d.setPassword}
+          secure
+        />
+        <Field
+          label="SSID (2.4G)"
+          value={d.ssid}
+          onChangeText={d.setSsid}
+          width={160}
+        />
+        <Field
+          label="Wi-Fi pwd"
+          value={d.wifiPassword}
+          onChangeText={d.setWifiPassword}
+          secure
+        />
+        <Field
+          label="Target °C"
+          value={d.targetTemp}
+          onChangeText={d.setTargetTemp}
+          width={90}
+          numeric
+        />
+        <Btn
+          title={running ? 'Running…' : 'Run happy path'}
+          onPress={running ? () => {} : runAll}
+        />
       </Section>
 
       <View style={styles.steps}>
@@ -96,13 +147,21 @@ export function HappyPath({ d }: { d: DemoCtx }) {
           const detail = steps[s.key]?.detail ?? '';
           return (
             <View key={s.key} style={styles.step}>
-              <Text style={[styles.icon, { color: STATUS_COLOR[st] }]}>{ICON[st]}</Text>
+              <Text style={[styles.icon, { color: STATUS_COLOR[st] }]}>
+                {ICON[st]}
+              </Text>
               <View style={styles.stepBody}>
                 <Text style={styles.stepLabel}>
                   {i + 1}. {s.label}
                 </Text>
                 {detail ? (
-                  <Text style={[styles.stepDetail, st === 'err' && styles.stepDetailErr]} numberOfLines={3}>
+                  <Text
+                    style={[
+                      styles.stepDetail,
+                      st === 'err' && styles.stepDetailErr,
+                    ]}
+                    numberOfLines={3}
+                  >
                     {detail}
                   </Text>
                 ) : null}

@@ -14,7 +14,11 @@ import TuyaMesh from './specs/NativeTuyaMesh';
 
 // --- Re-export type kết quả (khai báo inline trong từng spec do ràng buộc codegen) ---
 export type { UserResult, LoginTerminal } from './specs/NativeTuyaAuth';
-export type { HomeResult, HomeDeviceItem, WeatherSketch } from './specs/NativeTuyaHome';
+export type {
+  HomeResult,
+  HomeDeviceItem,
+  WeatherSketch,
+} from './specs/NativeTuyaHome';
 export type { DeviceResult } from './specs/NativeTuyaPairing';
 export type { DeviceSnapshot } from './specs/NativeTuyaDevice';
 export type { UpgradeInfo } from './specs/NativeTuyaOta';
@@ -105,10 +109,19 @@ export type BleScanEvent = {
 
 export type SessionExpiredEvent = { reason?: string };
 
-export type OtaProgressEvent = { devId: string; type: number; progress: number };
+export type OtaProgressEvent = {
+  devId: string;
+  type: number;
+  progress: number;
+};
 export type OtaStatusEvent = { devId: string; type: number; status: number };
 export type OtaSuccessEvent = { devId: string; type: number };
-export type OtaFailureEvent = { devId: string; type?: number; code: string; message?: string };
+export type OtaFailureEvent = {
+  devId: string;
+  type?: number;
+  code: string;
+  message?: string;
+};
 
 export type SceneChangeEvent = {
   type: string; // 'add' | 'update' | 'delete' | 'enable' | 'disable'
@@ -366,8 +379,9 @@ export function onDeviceStatus(
 export function onPairingProgress(
   listener: (event: PairingProgressEvent) => void
 ): Subscription {
-  return pairingEmitter.addListener(TuyaEvents.PAIRING_PROGRESS, (event: Object) =>
-    listener(event as unknown as PairingProgressEvent)
+  return pairingEmitter.addListener(
+    TuyaEvents.PAIRING_PROGRESS,
+    (event: Object) => listener(event as unknown as PairingProgressEvent)
   );
 }
 
@@ -438,16 +452,18 @@ export function onHomeChange(
 export function onMatterDeviceFound(
   listener: (event: MatterDeviceFoundEvent) => void
 ): Subscription {
-  return matterEmitter.addListener(TuyaEvents.MATTER_DEVICE_FOUND, (event: Object) =>
-    listener(event as unknown as MatterDeviceFoundEvent)
+  return matterEmitter.addListener(
+    TuyaEvents.MATTER_DEVICE_FOUND,
+    (event: Object) => listener(event as unknown as MatterDeviceFoundEvent)
   );
 }
 
 export function onMatterAttestation(
   listener: (event: MatterAttestationEvent) => void
 ): Subscription {
-  return matterEmitter.addListener(TuyaEvents.MATTER_ATTESTATION, (event: Object) =>
-    listener(event as unknown as MatterAttestationEvent)
+  return matterEmitter.addListener(
+    TuyaEvents.MATTER_ATTESTATION,
+    (event: Object) => listener(event as unknown as MatterAttestationEvent)
   );
 }
 
@@ -462,8 +478,9 @@ export function onMatterError(
 export function onMeshDeviceFound(
   listener: (event: MeshDeviceFoundEvent) => void
 ): Subscription {
-  return meshEmitter.addListener(TuyaEvents.MESH_DEVICE_FOUND, (event: Object) =>
-    listener(event as unknown as MeshDeviceFoundEvent)
+  return meshEmitter.addListener(
+    TuyaEvents.MESH_DEVICE_FOUND,
+    (event: Object) => listener(event as unknown as MeshDeviceFoundEvent)
   );
 }
 
@@ -478,7 +495,8 @@ export function onMeshDpUpdate(
 export function onMeshStatusChanged(
   listener: (event: MeshStatusChangedEvent) => void
 ): Subscription {
-  return meshEmitter.addListener(TuyaEvents.MESH_STATUS_CHANGED, (event: Object) =>
-    listener(event as unknown as MeshStatusChangedEvent)
+  return meshEmitter.addListener(
+    TuyaEvents.MESH_STATUS_CHANGED,
+    (event: Object) => listener(event as unknown as MeshStatusChangedEvent)
   );
 }

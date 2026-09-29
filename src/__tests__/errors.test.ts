@@ -12,7 +12,9 @@ describe('TuyaErrors.classify', () => {
   it('code 1004 is disambiguated by domain', () => {
     expect(TuyaErrors.classify('1004', 'sdk').category).toBe('pairing_failed');
     expect(TuyaErrors.classify('1004', 'sdk').needsNewToken).toBe(true);
-    expect(TuyaErrors.classify('1004', 'cloud').category).toBe('illegal_client');
+    expect(TuyaErrors.classify('1004', 'cloud').category).toBe(
+      'illegal_client'
+    );
   });
 
   it('not-logged-in → needsReLogin', () => {
@@ -25,7 +27,9 @@ describe('TuyaErrors.classify', () => {
   });
 
   it('ILLEGAL_CLIENT_ID → illegal_client', () => {
-    expect(TuyaErrors.classify('ILLEGAL_CLIENT_ID').category).toBe('illegal_client');
+    expect(TuyaErrors.classify('ILLEGAL_CLIENT_ID').category).toBe(
+      'illegal_client'
+    );
   });
 
   it('accepts numeric code', () => {

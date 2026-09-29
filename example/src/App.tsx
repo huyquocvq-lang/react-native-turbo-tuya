@@ -1,5 +1,12 @@
 import { useState } from 'react';
-import { SafeAreaView, ScrollView, Text, View, Pressable, StyleSheet } from 'react-native';
+import {
+  SafeAreaView,
+  ScrollView,
+  Text,
+  View,
+  Pressable,
+  StyleSheet,
+} from 'react-native';
 import { Console } from './ui';
 import { useDemo } from './useDemo';
 import { HappyPath } from './HappyPath';
@@ -28,8 +35,16 @@ export default function App() {
         <Text style={styles.h1}>react-native-turbo-tuya</Text>
         <Text style={styles.h2}>Full SDK demo · 12 TurboModules</Text>
         <View style={styles.tabs}>
-          <TabBtn label="Explorer" active={tab === 'explorer'} onPress={() => setTab('explorer')} />
-          <TabBtn label="Happy path" active={tab === 'happy'} onPress={() => setTab('happy')} />
+          <TabBtn
+            label="Explorer"
+            active={tab === 'explorer'}
+            onPress={() => setTab('explorer')}
+          />
+          <TabBtn
+            label="Happy path"
+            active={tab === 'happy'}
+            onPress={() => setTab('happy')}
+          />
         </View>
       </View>
 
@@ -63,8 +78,13 @@ function TabBtn({
   onPress: () => void;
 }) {
   return (
-    <Pressable onPress={onPress} style={[styles.tab, active && styles.tabActive]}>
-      <Text style={[styles.tabText, active && styles.tabTextActive]}>{label}</Text>
+    <Pressable
+      onPress={onPress}
+      style={[styles.tab, active && styles.tabActive]}
+    >
+      <Text style={[styles.tabText, active && styles.tabTextActive]}>
+        {label}
+      </Text>
     </Pressable>
   );
 }

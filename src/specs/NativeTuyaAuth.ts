@@ -76,9 +76,19 @@ export interface Spec extends TurboModule {
   // Login identity: email/phone bind or change via OTP.
   sendBindEmailCode(countryCode: string, email: string): Promise<void>;
   sendBindPhoneCode(countryCode: string, phone: string): Promise<void>;
-  bindEmail(countryCode: string, email: string, code: string, sessionId: string): Promise<void>;
+  bindEmail(
+    countryCode: string,
+    email: string,
+    code: string,
+    sessionId: string
+  ): Promise<void>;
   bindMobile(countryCode: string, phone: string, code: string): Promise<void>;
-  changeUserName(countryCode: string, code: string, sessionId: string, userName: string): Promise<void>;
+  changeUserName(
+    countryCode: string,
+    code: string,
+    sessionId: string,
+    userName: string
+  ): Promise<void>;
 
   // Reset password qua OTP (không có changePassword khi đang login).
   resetEmailPassword(
@@ -95,7 +105,11 @@ export interface Spec extends TurboModule {
   ): Promise<void>;
 
   // Third-party bind/unbind (CẦN verify chữ ký native - xem note user-account).
-  bindThirdParty(provider: string, token: string, extraInfo: string): Promise<void>;
+  bindThirdParty(
+    provider: string,
+    token: string,
+    extraInfo: string
+  ): Promise<void>;
   unbindThirdParty(provider: string): Promise<void>;
   getLinkedThirdParties(): Promise<string[]>;
 

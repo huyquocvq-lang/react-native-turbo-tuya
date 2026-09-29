@@ -84,7 +84,8 @@ export function useDemo(): { d: DemoCtx; lines: LogLine[]; clear: () => void } {
 
   // Live event log: subscribe once; auto-capture BLE uuid for pairing.
   useEffect(() => {
-    const evt = (name: string) => (e: unknown) => push(`evt:${name}`, fmt(e), 'evt');
+    const evt = (name: string) => (e: unknown) =>
+      push(`evt:${name}`, fmt(e), 'evt');
     const subs = [
       onDeviceStatus(evt('deviceStatus')),
       onPairingProgress(evt('pairingProgress')),
@@ -107,19 +108,32 @@ export function useDemo(): { d: DemoCtx; lines: LogLine[]; clear: () => void } {
   }, [push]);
 
   const d: DemoCtx = {
-    countryCode, setCountryCode,
-    email, setEmail,
-    password, setPassword,
-    code, setCode,
-    homeName, setHomeName,
-    homeId, setHomeId,
-    ssid, setSsid,
-    wifiPassword, setWifiPassword,
-    token, setToken,
-    uuid, setUuid,
-    devId, setDevId,
-    dpId, setDpId,
-    targetTemp, setTargetTemp,
+    countryCode,
+    setCountryCode,
+    email,
+    setEmail,
+    password,
+    setPassword,
+    code,
+    setCode,
+    homeName,
+    setHomeName,
+    homeId,
+    setHomeId,
+    ssid,
+    setSsid,
+    wifiPassword,
+    setWifiPassword,
+    token,
+    setToken,
+    uuid,
+    setUuid,
+    devId,
+    setDevId,
+    dpId,
+    setDpId,
+    targetTemp,
+    setTargetTemp,
     hid: () => Number(homeId),
     tempDps: () => JSON.stringify({ [dpId]: Number(targetTemp) }),
     run,

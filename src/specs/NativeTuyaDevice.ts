@@ -37,11 +37,23 @@ export interface Spec extends TurboModule {
   isDeviceOnline(devId: string): Promise<boolean>;
   isCloudConnected(): Promise<boolean>; // MQTT đã kết nối
   // mode: 'auto' | 'local' | 'internet'
-  publishDpsWithMode(devId: string, dpsJson: string, mode: string): Promise<void>;
+  publishDpsWithMode(
+    devId: string,
+    dpsJson: string,
+    mode: string
+  ): Promise<void>;
   // channels theo thứ tự ưu tiên (vd ['ble','cloud']) → map CommunicationEnum/orders
-  publishDpsWithChannels(devId: string, dpsJson: string, channels: string[]): Promise<void>;
+  publishDpsWithChannels(
+    devId: string,
+    dpsJson: string,
+    channels: string[]
+  ): Promise<void>;
   // Publish rồi resolve khi onDpUpdate khớp (onSuccess thường chỉ = "đã gửi"). timeoutMs <=0 → mặc định.
-  publishDpsAwaitAck(devId: string, dpsJson: string, timeoutMs: number): Promise<void>;
+  publishDpsAwaitAck(
+    devId: string,
+    dpsJson: string,
+    timeoutMs: number
+  ): Promise<void>;
   // Low-power: gửi DP vào cache chờ thiết bị wake. dpCacheType 0=device pull,1=cloud push.
   sendCacheDps(
     devId: string,

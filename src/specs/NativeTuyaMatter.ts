@@ -34,7 +34,10 @@ export interface Spec extends TurboModule {
   // 1) Parse "MT:..." → payload (native giữ lại SetupPayload).
   parseSetupCode(code: string): Promise<MatterSetupPayload>;
   // 2) Connect (BLE/mDNS) dùng payload đã parse → ConnectResult (native giữ lại).
-  connectDevice(homeId: number, timeoutSec: number): Promise<MatterConnectResult>;
+  connectDevice(
+    homeId: number,
+    timeoutSec: number
+  ): Promise<MatterConnectResult>;
   // 3) Commission dùng payload + connectResult đã lưu → thiết bị hoàn tất.
   commissionDevice(
     homeId: number,

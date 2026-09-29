@@ -89,8 +89,15 @@ const SDK_CODES: Record<string, TuyaErrorCategory> = {
   '-55': 'token_expired', // token expired
   '-56': 'token_expired', // token mismatch
   '-57': 'token_expired', // token verify fail
-  '-58': 'mqtt', '-59': 'mqtt', '-60': 'mqtt', '-61': 'mqtt',
-  '-62': 'mqtt', '-63': 'mqtt', '-64': 'mqtt', '-65': 'mqtt', '-66': 'mqtt',
+  '-58': 'mqtt',
+  '-59': 'mqtt',
+  '-60': 'mqtt',
+  '-61': 'mqtt',
+  '-62': 'mqtt',
+  '-63': 'mqtt',
+  '-64': 'mqtt',
+  '-65': 'mqtt',
+  '-66': 'mqtt',
   '-1400': 'dp_unsupported', // DP not supported / wrong schema
   '-1401': 'dp_unsupported', // DP wrong format
   '-1402': 'network', // query DP timeout
@@ -103,9 +110,12 @@ const SDK_CODES: Record<string, TuyaErrorCategory> = {
   '104': 'ssl_clock', // device clock wrong
   '105': 'not_logged_in',
   '106': 'network',
-  '1001': 'pairing_failed', '1002': 'pairing_failed', '1003': 'pairing_failed',
+  '1001': 'pairing_failed',
+  '1002': 'pairing_failed',
+  '1003': 'pairing_failed',
   '1004': 'pairing_failed', // get pairing token fail (on-device)
-  '1005': 'pairing_failed', '1007': 'pairing_failed',
+  '1005': 'pairing_failed',
+  '1007': 'pairing_failed',
   '1006': 'pairing_timeout',
   '1100': 'invalid_param',
   '1101': 'account', // OTP wrong
@@ -113,10 +123,19 @@ const SDK_CODES: Record<string, TuyaErrorCategory> = {
   '10201': 'network',
   '10202': 'network',
   '10203': 'device_offline',
-  '11001': 'dp_unsupported', '11002': 'dp_unsupported', '11003': 'dp_unsupported',
-  '11004': 'dp_unsupported', '11005': 'dp_unsupported', '11006': 'dp_unsupported',
-  '11007': 'dp_unsupported', '11008': 'dp_unsupported', '11009': 'dp_unsupported',
-  '12001': 'unknown', '12002': 'unknown', '12003': 'token_expired', '12004': 'unknown',
+  '11001': 'dp_unsupported',
+  '11002': 'dp_unsupported',
+  '11003': 'dp_unsupported',
+  '11004': 'dp_unsupported',
+  '11005': 'dp_unsupported',
+  '11006': 'dp_unsupported',
+  '11007': 'dp_unsupported',
+  '11008': 'dp_unsupported',
+  '11009': 'dp_unsupported',
+  '12001': 'unknown',
+  '12002': 'unknown',
+  '12003': 'token_expired',
+  '12004': 'unknown',
 };
 
 // Cloud OpenAPI codes override when domain === 'cloud' (some clash with on-device meaning, e.g. 1004).
@@ -127,8 +146,11 @@ const CLOUD_CODES: Record<string, TuyaErrorCategory> = {
   '1010': 'token_expired',
   '1011': 'token_expired',
   '1106': 'permission',
-  '2006': 'account', '2021': 'account', '2023': 'account',
-  '2401': 'account', '2056': 'account',
+  '2006': 'account',
+  '2021': 'account',
+  '2023': 'account',
+  '2401': 'account',
+  '2056': 'account',
 };
 
 function categoryOf(code: string, domain: TuyaErrorDomain): TuyaErrorCategory {
@@ -183,7 +205,8 @@ export function describe(
     not_initialized: 'SDK not initialized - call Tuya.initSdk() first.',
     not_logged_in: 'Not signed in - please sign in again.',
     invalid_param: 'Invalid parameter.',
-    token_expired: 'Token expired or mismatched - get a new token and try again.',
+    token_expired:
+      'Token expired or mismatched - get a new token and try again.',
     pairing_failed: 'Pairing failed.',
     pairing_timeout: 'Pairing timed out - try again.',
     dp_unsupported: 'DP not supported or wrong type/value.',
@@ -192,7 +215,8 @@ export function describe(
     network: 'Network error - check your connection and try again.',
     ssl_clock: 'Device or phone clock is wrong, or SSL certificate error.',
     account: 'Account error (OTP code, email, or password).',
-    illegal_client: 'Wrong AppKey/Secret or package/bundleId/SHA-256/Data Center.',
+    illegal_client:
+      'Wrong AppKey/Secret or package/bundleId/SHA-256/Data Center.',
     permission: 'Insufficient permissions.',
     unknown: 'Unknown error.',
   };
