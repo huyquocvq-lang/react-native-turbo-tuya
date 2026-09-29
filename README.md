@@ -1,4 +1,4 @@
-# @jimmyvu/react-native-turbo-tuya
+# @jimmy2k/react-native-turbo-tuya
 
 React Native **Turbo Native Module** wrapping the Tuya Smart Life App SDK (Wi-Fi + BLE) for the ice-bath app.
 
@@ -28,9 +28,9 @@ Split by feature into **12 independent TurboModules** (one Codegen spec each). L
 ## Installation
 
 ```sh
-yarn add @jimmyvu/react-native-turbo-tuya
+yarn add @jimmy2k/react-native-turbo-tuya
 # or
-npm install @jimmyvu/react-native-turbo-tuya
+npm install @jimmy2k/react-native-turbo-tuya
 ```
 
 Requires React Native 0.80+ with the New Architecture (TurboModules) enabled. Building needs **JDK 17 + Android SDK** (Android) and **macOS + Xcode** (iOS).
@@ -115,7 +115,7 @@ Everything is promise-based, apart from a few fire-and-forget calls such as `sta
 ### Quick start
 
 ```ts
-import { Tuya } from '@jimmyvu/react-native-turbo-tuya';
+import { Tuya } from '@jimmy2k/react-native-turbo-tuya';
 
 await Tuya.initSdk();                             // once at app start - keys are read natively
 await Tuya.loginWithEmail('49', email, password); // '49' = country calling code, picks the data center
@@ -171,7 +171,7 @@ await Tuya.logout();
 **Session expiry** - Tuya can end the session at any time (for example after a password change). The event can fire more than once, so keep the handler idempotent:
 
 ```ts
-import { onSessionExpired } from '@jimmyvu/react-native-turbo-tuya';
+import { onSessionExpired } from '@jimmy2k/react-native-turbo-tuya';
 
 const sub = onSessionExpired(() => goToLogin());
 ```
@@ -193,7 +193,7 @@ Load the home (`getHomeDeviceList` or `getHomeDetail`) after login, on each app 
 To reload when devices are added or removed elsewhere (another phone or app on the same account):
 
 ```ts
-import { onHomeChange } from '@jimmyvu/react-native-turbo-tuya';
+import { onHomeChange } from '@jimmy2k/react-native-turbo-tuya';
 
 await Tuya.startHomeStatusListener(home.homeId);
 const sub = onHomeChange((e) => {
@@ -223,7 +223,7 @@ The auto and combo calls fetch the pairing token for you. If you use `startWifiP
 **Wi-Fi**
 
 ```ts
-import { Tuya, onPairingProgress } from '@jimmyvu/react-native-turbo-tuya';
+import { Tuya, onPairingProgress } from '@jimmy2k/react-native-turbo-tuya';
 
 const progress = onPairingProgress((e) => console.log('pairing step:', e.step));
 try {
@@ -238,7 +238,7 @@ try {
 **Bluetooth and combo**
 
 ```ts
-import { Tuya, onBleScan, type BleScanEvent } from '@jimmyvu/react-native-turbo-tuya';
+import { Tuya, onBleScan, type BleScanEvent } from '@jimmy2k/react-native-turbo-tuya';
 
 const found = new Map<string, BleScanEvent>();
 const scan = onBleScan((d) => found.set(d.uuid, d)); // a device can show up more than once
@@ -295,7 +295,7 @@ await Tuya.publishDpsAwaitAck(devId, JSON.stringify({ '104': 20 }), 0);
 **Live updates** - register the device, then filter the shared event stream by `devId`:
 
 ```ts
-import { Tuya, onDeviceStatus } from '@jimmyvu/react-native-turbo-tuya';
+import { Tuya, onDeviceStatus } from '@jimmy2k/react-native-turbo-tuya';
 
 export function watchDevice(devId: string, onDps: (changed: Record<string, unknown>) => void) {
   Tuya.registerDeviceListener(devId);
@@ -353,7 +353,7 @@ await Tuya.removeTimer(TASK, devId, 'device', []); // [] = the whole task
 ### 7. Firmware updates (OTA)
 
 ```ts
-import { Tuya, onOtaProgress, onOtaSuccess, onOtaFailure } from '@jimmyvu/react-native-turbo-tuya';
+import { Tuya, onOtaProgress, onOtaSuccess, onOtaFailure } from '@jimmy2k/react-native-turbo-tuya';
 
 const updates = await Tuya.checkFirmwareUpgrade(devId);
 const available = updates.filter((u) => u.upgradeStatus === 1); // 1 = update available
@@ -418,7 +418,7 @@ Library messages are written for developers, so map these codes to your own text
 For Tuya's numeric codes, `TuyaErrors.classify(code, domain)` tells you what to do next:
 
 ```ts
-import { Tuya, TuyaErrors } from '@jimmyvu/react-native-turbo-tuya';
+import { Tuya, TuyaErrors } from '@jimmy2k/react-native-turbo-tuya';
 
 try {
   await Tuya.publishDpsAwaitAck(devId, dpsJson, 0);
@@ -458,7 +458,7 @@ Importing the package looks up the native modules straight away, so it throws un
 
 ```js
 // jest.setup.js
-jest.mock('@jimmyvu/react-native-turbo-tuya', () => {
+jest.mock('@jimmy2k/react-native-turbo-tuya', () => {
   const subscription = { remove: jest.fn() };
   return {
     Tuya: {

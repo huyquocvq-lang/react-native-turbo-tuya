@@ -7,7 +7,7 @@ import {
   ScrollView,
   StyleSheet,
 } from 'react-native';
-import { TuyaErrors } from '@jimmyvu/react-native-turbo-tuya';
+import { TuyaErrors } from '@jimmy2k/react-native-turbo-tuya';
 
 // ---------- Console ----------
 export type LogKind = 'in' | 'ok' | 'err' | 'evt';

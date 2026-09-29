@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Tuya } from '@jimmyvu/react-native-turbo-tuya';
+import { Tuya } from '@jimmy2k/react-native-turbo-tuya';
 import { Section, Field, Btn, fmt, errText } from './ui';
 import type { DemoCtx } from './useDemo';
 

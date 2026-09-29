@@ -2,7 +2,7 @@
   "compilerOptions": {
     "rootDir": ".",
     "paths": {
-      "@jimmyvu/react-native-turbo-tuya": ["./src/index"]
+      "@jimmy2k/react-native-turbo-tuya": ["./src/index"]
     },
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,

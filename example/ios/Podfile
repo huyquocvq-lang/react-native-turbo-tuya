@@ -29,7 +29,7 @@ target 'TuyaReactNativeExample' do
 
   # Tuya security file: giải nén docs/sdk/iOS_SDK/ios_core_sdk.tar.gz vào example/ios/
   # (Build/ + ThingSmartCryption.podspec ở cùng cấp Podfile). ThingSmartHomeKit do
-  # podspec của @jimmyvu/react-native-turbo-tuya kéo vào.
+  # podspec của @jimmy2k/react-native-turbo-tuya kéo vào.
   pod 'ThingSmartCryption', :path => './'
 
   post_install do |installer|
