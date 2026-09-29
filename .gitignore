@@ -93,3 +93,7 @@ example/ios/Build/
 gradle.properties
 **/google-services.json
 **/GoogleService-Info.plist
+
+# Tuya per-app security libraries (bound to one app id, never publish)
+**/security-algorithm*.aar
+example/android/app/libs/
