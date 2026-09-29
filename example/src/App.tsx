@@ -19,7 +19,7 @@ import {
   AdvancedSection,
 } from './sections';
 
-// Demo app for @jimmy-vu/react-native-turbo-tuya.
+// Demo app for @jimmyvu/react-native-turbo-tuya.
 // Two tabs: "Explorer" (every API, one section per module) + "Happy path" (auto sequential ice-bath flow).
 // Shared inputs + live event log + TuyaErrors classification live in useDemo().
 // NOTE: requires a real native build (JDK17+Android SDK / macOS+Xcode + valid AppKey/Secret).

@@ -1,4 +1,4 @@
-import { Tuya } from '@jimmy-vu/react-native-turbo-tuya';
+import { Tuya } from '@jimmyvu/react-native-turbo-tuya';
 import { Section, Btn } from '../ui';
 import type { DemoCtx } from '../useDemo';
 

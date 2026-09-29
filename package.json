@@ -1,5 +1,5 @@
 {
-  "name": "@jimmy-vu/react-native-turbo-tuya",
+  "name": "@jimmyvu/react-native-turbo-tuya",
   "version": "0.1.0",
   "description": "React Native TurboModule wrapping Tuya Smart Life App SDK (Wi-Fi + BLE) for the ice-bath app",
   "main": "./lib/module/index.js",
@@ -31,7 +31,7 @@
     "!**/.*"
   ],
   "scripts": {
-    "example": "yarn workspace @jimmy-vu/react-native-turbo-tuya-example",
+    "example": "yarn workspace @jimmyvu/react-native-turbo-tuya-example",
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
     "prepare": "bob build",
     "typecheck": "tsc",
@@ -48,14 +48,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/drakenvu/react-native-turbo-tuya.git"
+    "url": "git+https://github.com/jimmyvu/react-native-turbo-tuya.git"
   },
-  "author": "drakenvu <huyrambo2k@gmail.com> (https://github.com/drakenvu)",
+  "author": "jimmyvu <huyrambo2k@gmail.com> (https://github.com/jimmyvu)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/drakenvu/react-native-turbo-tuya/issues"
+    "url": "https://github.com/jimmyvu/react-native-turbo-tuya/issues"
   },
-  "homepage": "https://github.com/drakenvu/react-native-turbo-tuya#readme",
+  "homepage": "https://github.com/jimmyvu/react-native-turbo-tuya#readme",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
     "access": "public"

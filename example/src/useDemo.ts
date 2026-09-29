@@ -13,7 +13,7 @@ import {
   onMatterDeviceFound,
   onMatterError,
   onMeshDeviceFound,
-} from '@jimmy-vu/react-native-turbo-tuya';
+} from '@jimmyvu/react-native-turbo-tuya';
 import { useConsole, useRun, fmt, type LogKind, type LogLine } from './ui';
 
 export type Push = (tag: string, text: string, kind?: LogKind) => void;
