@@ -48,14 +48,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jimmyvu/react-native-turbo-tuya.git"
+    "url": "git+https://github.com/huyquocvq-lang/react-native-turbo-tuya.git"
   },
-  "author": "jimmyvu <huyrambo2k@gmail.com> (https://github.com/jimmyvu)",
+  "author": "jimmyvu <huyrambo2k@gmail.com> (https://github.com/huyquocvq-lang)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/jimmyvu/react-native-turbo-tuya/issues"
+    "url": "https://github.com/huyquocvq-lang/react-native-turbo-tuya/issues"
   },
-  "homepage": "https://github.com/jimmyvu/react-native-turbo-tuya#readme",
+  "homepage": "https://github.com/huyquocvq-lang/react-native-turbo-tuya#readme",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
     "access": "public"
