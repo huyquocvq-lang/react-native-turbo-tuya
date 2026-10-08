@@ -21,6 +21,8 @@ Pod::Spec.new do |s|
   # tiêu thụ (example / apps/mobile), KHÔNG ở đây. Xem README.md.
   s.dependency "ThingSmartHomeKit"
   s.dependency "ThingSmartBusinessExtensionKit"
+  # TuyaScene.mm serialize model scene bằng YYModel (đã có sẵn qua các pod Tuya - khai báo cho tường minh).
+  s.dependency "YYModel"
 
   install_modules_dependencies(s)
 end
