@@ -1,15 +1,25 @@
 #import "TuyaOta.h"
+#import "TuyaReject.h"
 #import <ThingSmartHomeKit/ThingSmartKit.h>
 
 // TuyaOta (iOS) - WIRED: checkFirmwareUpgrade / startFirmwareUpgrade (fetch+filter theo type) / cancelFirmwareUpgrade
+// + confirmWarningUpgrade + get/setAutoUpgradeSwitch
 // + progress qua ThingSmartDeviceDelegate (firmwareUpgradeProgress / otaUpdateStatusChanged) → onOtaProgress/onOtaStatusChanged.
-// Verbatim: docs/research/tuya-home-sdk-device-management.md (OTA iOS).
-// TODO (selector iOS chưa verbatim): confirmWarningUpgrade, get/setAutoUpgradeSwitch.
+// Verbatim: docs/research/tuya-home-sdk-device-management.md (OTA iOS); 3 selector mới verify với header Pods
+// (ThingSmartDevice+OTA.h confirmWarningUpgradeTask:, ThingSmartDevice.h getAutoUpgradeSwitchInfoWithSuccess: /
+// saveUpgradeInfoWithSwitchValue:) + doc "Firmware Updates" iOS.
 // ⚠️ Verify: property của ThingSmartFirmwareUpgradeModel / ThingSmartFirmwareUpgradeStatusModel.
-static void TuyaTODO(NSString *what, RCTPromiseRejectBlock reject) {
-  reject(@"ios_todo",
-         [NSString stringWithFormat:@"iOS '%@' chưa wire - xem docs/research/tuya-home-sdk-device-management.md (OTA).", what],
-         nil);
+
+// Reject mang mã lỗi Tuya THẬT (NSError.code); SDK không trả NSError → fallback nói rõ. Dùng cho method mới.
+static void TuyaRejectNSError(RCTPromiseRejectBlock reject,
+                              NSError *error,
+                              NSString *fallbackCode,
+                              NSString *fallbackMessage) {
+  if (error) {
+    TuyaRejectWithDomain(reject, [@(error.code) stringValue], error.localizedDescription, @"sdk");
+  } else {
+    TuyaRejectWithDomain(reject, fallbackCode, fallbackMessage, @"sdk");
+  }
 }
 
 static NSDictionary *TuyaUpgradeInfo(ThingSmartFirmwareUpgradeModel *m) {
@@ -91,19 +101,54 @@ RCT_EXPORT_MODULE()
                      failure:^(NSError *e) { reject(@"cancel_ota_error", e.localizedDescription, e); }];
 }
 
+// Trả lời cảnh báo giữa chừng của task OTA (vd ThingOTAErrorCodeSignalStrengthNotSatisfy = sóng yếu) - chỉ áp dụng
+// cho task khởi từ startFirmwareUpgrade:. Dùng LẠI instance đã bind lúc start (giữ task + delegate). SDK void ⇒
+// resolve = "đã gửi lựa chọn"; kết quả tiếp theo về qua event OTA như thường.
 - (void)confirmWarningUpgrade:(NSString *)devId
                    isContinue:(BOOL)isContinue
                       resolve:(RCTPromiseResolveBlock)resolve
-                       reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"confirmWarningUpgrade", reject); }
+                       reject:(RCTPromiseRejectBlock)reject {
+  ThingSmartDevice *dev = [self bindDevice:devId];
+  if (!dev) {
+    TuyaRejectWithDomain(reject, @"no_device", [NSString stringWithFormat:@"Device not found: %@", devId], @"sdk");
+    return;
+  }
+  [dev confirmWarningUpgradeTask:isContinue];
+  resolve(nil);
+}
 
+// Công tắc tự cập nhật firmware: success trả NSNumber 0 = tắt, 1 = bật (doc iOS).
 - (void)getAutoUpgradeSwitch:(NSString *)devId
                      resolve:(RCTPromiseResolveBlock)resolve
-                      reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"getAutoUpgradeSwitch", reject); }
+                      reject:(RCTPromiseRejectBlock)reject {
+  ThingSmartDevice *dev = [ThingSmartDevice deviceWithDeviceId:devId];
+  if (!dev) {
+    TuyaRejectWithDomain(reject, @"no_device", [NSString stringWithFormat:@"Device not found: %@", devId], @"sdk");
+    return;
+  }
+  [dev getAutoUpgradeSwitchInfoWithSuccess:^(id result) {
+    // NSNumber (doc) / NSString số đều có integerValue; kiểu khác ⇒ 0 (khớp Android `result ?: 0`).
+    resolve(@([result respondsToSelector:@selector(integerValue)] ? [result integerValue] : 0));
+  } failure:^(NSError *e) {
+    TuyaRejectNSError(reject, e, @"ota_switch_error", @"getAutoUpgradeSwitchInfo failed.");
+  }];
+}
 
 - (void)setAutoUpgradeSwitch:(NSString *)devId
                        state:(double)state
                      resolve:(RCTPromiseResolveBlock)resolve
-                      reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"setAutoUpgradeSwitch", reject); }
+                      reject:(RCTPromiseRejectBlock)reject {
+  ThingSmartDevice *dev = [ThingSmartDevice deviceWithDeviceId:devId];
+  if (!dev) {
+    TuyaRejectWithDomain(reject, @"no_device", [NSString stringWithFormat:@"Device not found: %@", devId], @"sdk");
+    return;
+  }
+  [dev saveUpgradeInfoWithSwitchValue:(NSInteger)state
+                              success:^{ resolve(nil); }
+                              failure:^(NSError *e) {
+    TuyaRejectNSError(reject, e, @"ota_switch_error", @"saveUpgradeInfo (auto-upgrade switch) failed.");
+  }];
+}
 
 // ---------- ThingSmartDeviceDelegate (OTA gộp chung) ----------
 - (void)device:(ThingSmartDevice *)device firmwareUpgradeProgress:(NSInteger)type progress:(double)progress {
