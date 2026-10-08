@@ -71,7 +71,9 @@ export interface Spec extends TurboModule {
     token: string,
     timeoutSec: number
   ): Promise<DeviceResult>;
-  // QR IN thiết bị (thiết bị đã online internet): Android QRScanActivator; iOS parseQRCode+getTokenWithUUID.
+  // QR IN thiết bị (thiết bị đã online internet, vd 4G): code = nội dung QR thô. Android deviceQrCodeParse →
+  // newQRCodeDevActivator; iOS parseQRCode → uuid → ThingSmartPairConfiguration (SDK tự lấy token theo uuid).
+  // assetId hiện không dùng (chỉ API activator hợp nhất mới cần) - truyền '' được.
   startQrPairing(
     homeId: number,
     assetId: string,

@@ -80,6 +80,8 @@ export type PairingProgressEvent = {
    * iOS: tên map từ ThingActivatorStep (`device_found` · `device_registered` · `device_initialized` ·
    * `device_timeout` · `device_state_error` …). Android: chuỗi `onStep()` nguyên văn của SDK.
    * ⚠️ `device_timeout` / `device_state_error` là LỖI, không phải tiến trình.
+   * Pairing nâng cao (cả 2 nền tảng): `subdevice_found` (dataJson = devId) · `subdevice_error` ·
+   * `gateway_found` (dataJson = {gwId, productId}) · `qr_parsed` (dataJson = {actionName, uuid}).
    */
   step: string;
   dataJson?: string;

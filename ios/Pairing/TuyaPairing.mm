@@ -5,7 +5,8 @@
 
 // TuyaPairing (iOS) - WIRED: token + Wi-Fi EZ/AP (ThingSmartActivator delegate) + BLE scan/pair (ThingSmartBLEManager)
 // + combo BLE+Wi-Fi (ThingSmartBLEWifiActivator) + auto-token. Verbatim: docs/research/tuya-home-sdk-device-pairing.md
-// + tuya-home-sdk-bluetooth.md. P3 advanced (sub-device/gateway/QR/wired/destroyActivator) giữ TODO.
+// + tuya-home-sdk-bluetooth.md. P3 nâng cao (sub-device / gateway / QR / wired / destroyActivator): ThingSmartActivator
+// instance RIÊNG (alloc/init) + delegate riêng - selector verify với header Pods ThingSmartActivatorCoreKit/ThingSmartActivator.h.
 // Đã verify header: ThingActivatorModeEZ/AP ✓; scan type = ThingBLEScanTypeNoraml (typo nguyên văn của SDK);
 // combo dùng property bleWifiDelegate + callback bleWifiActivator:didReceiveBLEWifiConfigDevice:error: ✓;
 // failure của activeBLE/startConfigBLEWifi là ThingFailureHandler (block rỗng - SDK không trả NSError).
@@ -13,11 +14,6 @@
 // LỖI: mọi reject đi qua TuyaReject.h → shape { code, message, domain } khớp src/errors.ts.
 // Trước đây reject bằng literal (@"pairing_error") làm MẤT NSError.code (mã Tuya thật) và nuốt message
 // → app chỉ hiện "[sdk:pairing_error] Unknown error." Xem dev-workflow/m1-fix-wifi-pairing/.
-static void TuyaTODO(NSString *what, RCTPromiseRejectBlock reject) {
-  TuyaRejectWithDomain(reject, @"ios_todo",
-      [NSString stringWithFormat:@"iOS '%@' chưa wire - xem docs/research/tuya-home-sdk-device-pairing.md.", what],
-      @"sdk");
-}
 
 // Reject mang mã lỗi Tuya THẬT: NSError.code (vd -55 = token hết hạn) + localizedDescription nguyên văn.
 // SDK không trả NSError (một số ThingFailureHandler là block rỗng) → dùng fallback, nói rõ là SDK không có chi tiết.
@@ -69,6 +65,85 @@ static NSString *TuyaActivatorStepName(ThingActivatorStep step) {
   return [NSString stringWithFormat:@"step_%lu", (unsigned long)step];
 }
 
+// ---------- Pairing nâng cao: hằng + helper ----------
+// Mặc định của SDK ("Timeout, default 100 seconds") khi JS truyền timeoutSec <= 0.
+static const double kTuyaAdvDefaultTimeoutSec = 100;
+// Lưới an toàn sau timeout của SDK (SDK tự báo timeout qua didReceiveDevice:error:, step 4).
+static const double kTuyaAdvGraceSec = 15;
+
+static NSString *TuyaJsonString(NSDictionary *obj) {
+  if (![NSJSONSerialization isValidJSONObject:obj]) return @"{}";
+  NSData *d = [NSJSONSerialization dataWithJSONObject:obj options:0 error:nil];
+  return d ? [[NSString alloc] initWithData:d encoding:NSUTF8StringEncoding] : @"{}";
+}
+
+// parseQRCode: trả NSDictionary {actionName, actionData}; uuid nằm trong actionData (dict, phòng khi là chuỗi JSON).
+static NSString *TuyaQrUuid(id result, NSString **actionName) {
+  NSDictionary *dict = [result isKindOfClass:[NSDictionary class]] ? result : nil;
+  id name = dict[@"actionName"];
+  if (actionName) *actionName = [name isKindOfClass:[NSString class]] ? name : @"";
+  id data = dict[@"actionData"];
+  if ([data isKindOfClass:[NSString class]]) {
+    NSData *raw = [(NSString *)data dataUsingEncoding:NSUTF8StringEncoding];
+    data = raw ? [NSJSONSerialization JSONObjectWithData:raw options:0 error:nil] : nil;
+  }
+  id uuid = [data isKindOfClass:[NSDictionary class]] ? ((NSDictionary *)data)[@"uuid"] : nil;
+  return ([uuid isKindOfClass:[NSString class]] && [(NSString *)uuid length] > 0) ? uuid : nil;
+}
+
+// Delegate RIÊNG cho activator nâng cao (gateway / QR / wired / sub-device), tách khỏi delegate Wi-Fi (module +
+// sharedInstance) để 2 luồng không giẫm nhau. ThingSmartActivator.delegate là weak ⇒ module giữ strong helper này.
+// Callback LUÔN hop async sang main: module thả activator lúc settle mà không dealloc nó giữa callback của chính nó.
+@interface TuyaAdvActivatorDelegate : NSObject <ThingSmartActivatorDelegate>
+@property (nonatomic, assign) long long homeId; // > 0 ⇒ trả qua activatorGetHomeId: (QR / wired)
+@property (nonatomic, copy) void (^onResult)(ThingSmartDeviceModel *model, NSError *error);
+@property (nonatomic, copy) void (^onStep)(ThingSmartDeviceModel *model, ThingActivatorStep step, NSError *error);
+@property (nonatomic, copy) void (^onGateway)(NSString *gwId, NSString *productId);
+@property (nonatomic, copy) void (^onStateError)(NSError *error);
+@end
+
+@implementation TuyaAdvActivatorDelegate
+
+// SDK hỏi respondsToSelector: trước khi gọi activatorGetHomeId: → homeId <= 0 thì "không trả lời" để SDK tự lấy
+// (vd nhà gắn với token). Vì vậy phải set homeId TRƯỚC khi gán làm delegate.
+- (BOOL)respondsToSelector:(SEL)selector {
+  if (selector == @selector(activatorGetHomeId:)) return self.homeId > 0;
+  return [super respondsToSelector:selector];
+}
+
+- (long long)activatorGetHomeId:(ThingSmartActivator *)activator { return self.homeId; }
+
+// Kết quả cuối (SDK gọi cho step 0/3/4: thành công, hoặc lỗi kể cả timeout) - sub-device: gọi cho TỪNG thiết bị.
+- (void)activator:(ThingSmartActivator *)activator
+   didReceiveDevice:(ThingSmartDeviceModel *)deviceModel
+              error:(NSError *)error {
+  void (^cb)(ThingSmartDeviceModel *, NSError *) = self.onResult;
+  if (cb) dispatch_async(dispatch_get_main_queue(), ^{ cb(deviceModel, error); });
+}
+
+- (void)activator:(ThingSmartActivator *)activator
+   didReceiveDevice:(ThingSmartDeviceModel *)deviceModel
+               step:(ThingActivatorStep)step
+              error:(NSError *)error {
+  void (^cb)(ThingSmartDeviceModel *, ThingActivatorStep, NSError *) = self.onStep;
+  if (cb) dispatch_async(dispatch_get_main_queue(), ^{ cb(deviceModel, step, error); });
+}
+
+// Thiết bị nối dây/gateway chưa kích hoạt broadcast trên LAN (cùng mạng với điện thoại).
+- (void)activator:(ThingSmartActivator *)activator
+    didFindGatewayWithDeviceId:(NSString *)deviceId
+                     productId:(NSString *)productId {
+  void (^cb)(NSString *, NSString *) = self.onGateway;
+  if (cb) dispatch_async(dispatch_get_main_queue(), ^{ cb(deviceId, productId); });
+}
+
+- (void)deviceStateError:(NSError *)error {
+  void (^cb)(NSError *) = self.onStateError;
+  if (cb && error) dispatch_async(dispatch_get_main_queue(), ^{ cb(error); });
+}
+
+@end
+
 @interface TuyaPairing () <ThingSmartActivatorDelegate, ThingSmartBLEManagerDelegate, ThingSmartBLEWifiActivatorDelegate>
 - (void)startApWithMode:(ThingActivatorMode)mode
                    ssid:(NSString *)ssid
@@ -82,6 +157,17 @@ static NSString *TuyaActivatorStepName(ThingActivatorStep step) {
 @property (nonatomic, copy) RCTPromiseRejectBlock comboReject;
 @property (nonatomic, strong) ThingSmartBLEWifiActivator *comboActivator;
 @property (nonatomic, strong) NSMutableDictionary<NSString *, ThingBLEAdvModel *> *scanned;
+// Pairing nâng cao gateway / QR / wired: 1 phiên tại 1 thời điểm; state CHỈ đụng trên main queue.
+@property (nonatomic, strong) ThingSmartActivator *advActivator;
+@property (nonatomic, strong) TuyaAdvActivatorDelegate *advDelegate;
+@property (nonatomic, copy) RCTPromiseResolveBlock advResolve;
+@property (nonatomic, copy) RCTPromiseRejectBlock advReject;
+@property (nonatomic, assign) NSUInteger advGeneration;
+// Sub-device: slot riêng (void, kết quả qua event) để không đá phiên gateway/QR/wired.
+@property (nonatomic, strong) ThingSmartActivator *subActivator;
+@property (nonatomic, strong) TuyaAdvActivatorDelegate *subDelegate;
+@property (nonatomic, copy) NSString *subGwId;
+@property (nonatomic, assign) NSUInteger subGeneration;
 @end
 
 @implementation TuyaPairing
@@ -379,29 +465,151 @@ RCT_EXPORT_MODULE()
   self.comboReject = nil;
 }
 
-// ---------- P3: pairing nâng cao (unified/ThingSmartActivator - chưa verbatim) ----------
-- (void)startSubDevicePairing:(NSString *)gatewayDevId timeoutSec:(double)timeoutSec {}
-- (void)stopSubDevicePairing:(NSString *)gatewayDevId {}
+// ---------- P3: pairing nâng cao (ThingSmartActivator instance riêng + TuyaAdvActivatorDelegate) ----------
+// Step trung gian → onPairingProgress cùng tên/shape với Wi-Fi (TuyaActivatorStepName); kết quả cuối → promise.
 
+// Sub-device (Zigbee/BLE qua gateway): gateway phải online cloud, KHÔNG cần token. Mỗi sub-device ghép xong →
+// onPairingProgress(step='subdevice_found', dataJson=devId, devId); lỗi/timeout → step='subdevice_error' + error*.
+- (void)startSubDevicePairing:(NSString *)gatewayDevId timeoutSec:(double)timeoutSec {
+  double t = timeoutSec > 0 ? timeoutSec : kTuyaAdvDefaultTimeoutSec;
+  dispatch_async(dispatch_get_main_queue(), ^{
+    [self stopSubDeviceActivator];
+    NSUInteger gen = self.subGeneration;
+    __weak TuyaPairing *weakSelf = self;
+    TuyaAdvActivatorDelegate *d = [TuyaAdvActivatorDelegate new];
+    d.onResult = ^(ThingSmartDeviceModel *model, NSError *error) {
+      TuyaPairing *s = weakSelf;
+      if (!s || s.subGeneration != gen) return;
+      if (error) {
+        [s emit:@"onPairingProgress" body:@{
+          @"step": @"subdevice_error",
+          @"dataJson": @"",
+          @"errorCode": [@(error.code) stringValue],
+          @"errorMessage": error.localizedDescription ?: @"",
+          @"errorDomain": error.domain ?: @"",
+        }];
+      } else if (model.devId.length) {
+        [s emit:@"onPairingProgress" body:@{ @"step": @"subdevice_found", @"dataJson": model.devId, @"devId": model.devId }];
+      }
+    };
+    d.onStep = ^(ThingSmartDeviceModel *model, ThingActivatorStep step, NSError *error) {
+      TuyaPairing *s = weakSelf;
+      if (s && s.subGeneration == gen) [s emitAdvStep:step model:model error:error];
+    };
+    d.onStateError = ^(NSError *error) {
+      TuyaPairing *s = weakSelf;
+      if (s && s.subGeneration == gen) [s emitStateError:error];
+    };
+    ThingSmartActivator *act = [[ThingSmartActivator alloc] init];
+    act.delegate = d;
+    self.subActivator = act;
+    self.subDelegate = d;
+    self.subGwId = gatewayDevId;
+    [act activeSubDeviceWithGwId:gatewayDevId timeout:t];
+  });
+}
+
+- (void)stopSubDevicePairing:(NSString *)gatewayDevId {
+  dispatch_async(dispatch_get_main_queue(), ^{ [self stopSubDeviceActivator]; });
+}
+
+// Gateway (nối dây / đã ở trong LAN) biết trước gwId + productId: SDK chờ broadcast của đúng gwId rồi gửi token.
+// Điện thoại phải cùng mạng với gateway; gwId/productId lấy từ event 'gateway_found' (startWiredPairing) hoặc tem thiết bị.
 - (void)startGatewayPairing:(NSString *)gatewayDevId
                   productId:(NSString *)productId
                       token:(NSString *)token
                  timeoutSec:(double)timeoutSec
                     resolve:(RCTPromiseResolveBlock)resolve
-                     reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"startGatewayPairing", reject); }
+                     reject:(RCTPromiseRejectBlock)reject {
+  if (gatewayDevId.length == 0 || token.length == 0) {
+    TuyaRejectWithDomain(reject, @"invalid_argument", @"gatewayDevId and token are required.", @"sdk");
+    return;
+  }
+  double t = timeoutSec > 0 ? timeoutSec : kTuyaAdvDefaultTimeoutSec;
+  dispatch_async(dispatch_get_main_queue(), ^{
+    [self beginAdvFlow:@"gateway" homeId:0 timeout:t resolve:resolve reject:reject];
+    [self.advActivator activeGatewayDeviceWithGwId:gatewayDevId
+                                         productId:(productId ?: @"")
+                                             token:token
+                                           timeout:t];
+  });
+}
 
+// QR in trên thiết bị (thiết bị đã online internet, vd 4G): doc "Device QR Code Pairing" - parseQRCode → uuid →
+// ThingSmartPairConfiguration(uuid, gid=homeId) → startActiveDeviceWithConfigurations: mode MQTTDirectly. Token SDK
+// tự lấy theo uuid (getQRToken nội bộ - đã xem SDK) ⇒ không cần getTokenWithUUID. assetId: chỉ API hợp nhất mới dùng → bỏ qua.
 - (void)startQrPairing:(double)homeId
                assetId:(NSString *)assetId
                   code:(NSString *)code
             timeoutSec:(double)timeoutSec
                resolve:(RCTPromiseResolveBlock)resolve
-                reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"startQrPairing", reject); }
+                reject:(RCTPromiseRejectBlock)reject {
+  if (code.length == 0) {
+    TuyaRejectWithDomain(reject, @"invalid_argument", @"QR code content is empty.", @"sdk");
+    return;
+  }
+  double t = timeoutSec > 0 ? timeoutSec : kTuyaAdvDefaultTimeoutSec;
+  dispatch_async(dispatch_get_main_queue(), ^{
+    NSUInteger gen = [self beginAdvFlow:@"qr" homeId:(long long)homeId timeout:t resolve:resolve reject:reject];
+    __weak TuyaPairing *weakSelf = self;
+    [ThingSmartActivator parseQRCode:code success:^(id result) {
+      dispatch_async(dispatch_get_main_queue(), ^{
+        TuyaPairing *s = weakSelf;
+        if (!s || s.advGeneration != gen || !s.advReject) return;
+        NSString *actionName = @"";
+        NSString *uuid = TuyaQrUuid(result, &actionName);
+        if (uuid.length == 0) {
+          NSString *desc = [result description] ?: @"(nil)";
+          if (desc.length > 300) desc = [[desc substringToIndex:300] stringByAppendingString:@"..."];
+          [s finishAdv:^(RCTPromiseResolveBlock res, RCTPromiseRejectBlock rej) {
+            TuyaRejectWithDomain(rej, @"qr_uuid_missing",
+                [NSString stringWithFormat:@"QR parsed (actionName=%@) but actionData has no uuid: %@", actionName, desc],
+                @"sdk");
+          }];
+          return;
+        }
+        [s emit:@"onPairingProgress" body:@{
+          @"step": @"qr_parsed",
+          @"dataJson": TuyaJsonString(@{ @"actionName": actionName ?: @"", @"uuid": uuid }),
+        }];
+        ThingSmartPairConfiguration *config = [[ThingSmartPairConfiguration alloc] init];
+        config.uuid = uuid;
+        config.gid = [NSString stringWithFormat:@"%lld", (long long)homeId];
+        [s.advActivator startActiveDeviceWithConfigurations:config mode:ThingActivatorModeMQTTDirectly timeout:t];
+      });
+    } failure:^(NSError *error) {
+      dispatch_async(dispatch_get_main_queue(), ^{
+        TuyaPairing *s = weakSelf;
+        if (!s || s.advGeneration != gen || !s.advReject) return;
+        [s finishAdv:^(RCTPromiseResolveBlock res, RCTPromiseRejectBlock rej) {
+          TuyaRejectNSError(rej, error, @"qr_parse_error", @"parseQRCode failed.");
+        }];
+      });
+    }];
+  });
+}
 
+// Wired (thiết bị nối dây, chưa biết gwId): doc "Wired Mode" = startConfigWiFiWithToken:timeout: - đã disassemble:
+// đúng bằng activeGatewayDeviceWithGwId:nil productId:nil token:timeout: ⇒ SDK nghe broadcast trên LAN và activate
+// thiết bị nó thấy. Deprecated chỉ vì bản mới muốn biết trước gwId (ở đây không có). Thiết bị thấy → 'gateway_found'.
 - (void)startWiredPairing:(double)homeId
                     token:(NSString *)token
                timeoutSec:(double)timeoutSec
                   resolve:(RCTPromiseResolveBlock)resolve
-                   reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"startWiredPairing", reject); }
+                   reject:(RCTPromiseRejectBlock)reject {
+  if (token.length == 0) {
+    TuyaRejectWithDomain(reject, @"invalid_argument", @"token is required (getPairingToken(homeId)).", @"sdk");
+    return;
+  }
+  double t = timeoutSec > 0 ? timeoutSec : kTuyaAdvDefaultTimeoutSec;
+  dispatch_async(dispatch_get_main_queue(), ^{
+    [self beginAdvFlow:@"wired" homeId:(long long)homeId timeout:t resolve:resolve reject:reject];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    [self.advActivator startConfigWiFiWithToken:token timeout:t];
+#pragma clang diagnostic pop
+  });
+}
 
 - (void)destroyActivator {
   [[ThingSmartActivator sharedInstance] stopConfigWiFi];
@@ -409,11 +617,149 @@ RCT_EXPORT_MODULE()
   self.comboActivator.bleWifiDelegate = nil;
   self.comboActivator = nil;
   [self.scanned removeAllObjects];
+  // Pairing nâng cao: phiên gateway/QR/wired đang chờ → reject 'pairing_cancelled'; dừng sub-device.
+  dispatch_async(dispatch_get_main_queue(), ^{
+    [self cancelAdvFlow:@"destroyActivator() was called."];
+    [self stopSubDeviceActivator];
+  });
+}
+
+// ---------- helper pairing nâng cao (GỌI TRÊN MAIN QUEUE) ----------
+
+// Mở phiên gateway/QR/wired: phiên cũ còn chờ → reject 'pairing_cancelled'; tạo activator + delegate mới.
+// Trả generation để callback async (parseQRCode) nhận ra phiên đã bị thay.
+- (NSUInteger)beginAdvFlow:(NSString *)what
+                    homeId:(long long)homeId
+                   timeout:(double)timeoutSec
+                   resolve:(RCTPromiseResolveBlock)resolve
+                    reject:(RCTPromiseRejectBlock)reject {
+  [self cancelAdvFlow:[NSString stringWithFormat:@"Superseded by a new %@ pairing request.", what]];
+  NSUInteger gen = ++self.advGeneration;
+  self.advResolve = resolve;
+  self.advReject = reject;
+
+  __weak TuyaPairing *weakSelf = self;
+  TuyaAdvActivatorDelegate *d = [TuyaAdvActivatorDelegate new];
+  d.homeId = homeId; // set TRƯỚC khi gán delegate (xem respondsToSelector:)
+  d.onResult = ^(ThingSmartDeviceModel *model, NSError *error) {
+    TuyaPairing *s = weakSelf;
+    if (!s || s.advGeneration != gen) return;
+    if (error) {
+      // NSError.code = mã Tuya thật (vd token hết hạn / timeout). ĐỪNG thay bằng literal.
+      [s finishAdv:^(RCTPromiseResolveBlock res, RCTPromiseRejectBlock rej) {
+        TuyaRejectNSError(rej, error, [what stringByAppendingString:@"_pairing_error"],
+                          [NSString stringWithFormat:@"Pairing (%@) failed.", what]);
+      }];
+    } else if (model) {
+      [s finishAdv:^(RCTPromiseResolveBlock res, RCTPromiseRejectBlock rej) { res(TuyaPairResult(model)); }];
+    }
+  };
+  d.onStep = ^(ThingSmartDeviceModel *model, ThingActivatorStep step, NSError *error) {
+    TuyaPairing *s = weakSelf;
+    if (s && s.advGeneration == gen) [s emitAdvStep:step model:model error:error];
+  };
+  d.onGateway = ^(NSString *gwId, NSString *productId) {
+    TuyaPairing *s = weakSelf;
+    if (s && s.advGeneration == gen) [s emitGatewayFound:gwId productId:productId];
+  };
+  d.onStateError = ^(NSError *error) {
+    TuyaPairing *s = weakSelf;
+    if (s && s.advGeneration == gen) [s emitStateError:error];
+  };
+  ThingSmartActivator *act = [[ThingSmartActivator alloc] init];
+  act.delegate = d;
+  self.advActivator = act;
+  self.advDelegate = d;
+
+  // Lưới an toàn: chỉ khi SDK im lặng quá timeout + grace (bình thường SDK tự báo timeout qua onResult).
+  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)((timeoutSec + kTuyaAdvGraceSec) * NSEC_PER_SEC)),
+                 dispatch_get_main_queue(), ^{
+    TuyaPairing *s = weakSelf;
+    if (!s || s.advGeneration != gen || !s.advReject) return;
+    [s finishAdv:^(RCTPromiseResolveBlock res, RCTPromiseRejectBlock rej) {
+      TuyaRejectWithDomain(rej, @"pairing_timeout",
+          [NSString stringWithFormat:@"No %@ pairing result from the SDK within %.0fs.", what, timeoutSec + kTuyaAdvGraceSec],
+          @"sdk");
+    }];
+  });
+  return gen;
+}
+
+// Kết thúc phiên đúng 1 lần: lấy promise ra, dừng + thả activator, rồi resolve/reject.
+- (void)finishAdv:(void (^)(RCTPromiseResolveBlock resolve, RCTPromiseRejectBlock reject))finish {
+  RCTPromiseResolveBlock res = self.advResolve;
+  RCTPromiseRejectBlock rej = self.advReject;
+  self.advResolve = nil;
+  self.advReject = nil;
+  ThingSmartActivator *act = self.advActivator;
+  self.advActivator = nil;
+  self.advDelegate = nil;
+  if (act) {
+    act.delegate = nil;
+    [act stopConfigWiFi];
+    // Giữ instance thêm 1 vòng main queue: không dealloc activator ngay trong call stack của chính nó.
+    dispatch_async(dispatch_get_main_queue(), ^{ (void)act; });
+  }
+  if (res && rej) finish(res, rej);
+}
+
+- (void)cancelAdvFlow:(NSString *)reason {
+  if (!self.advActivator && !self.advReject) return;
+  [self finishAdv:^(RCTPromiseResolveBlock res, RCTPromiseRejectBlock rej) {
+    TuyaRejectWithDomain(rej, @"pairing_cancelled", reason, @"sdk");
+  }];
+}
+
+- (void)stopSubDeviceActivator {
+  ThingSmartActivator *act = self.subActivator;
+  NSString *gwId = self.subGwId;
+  self.subGeneration++;
+  self.subActivator = nil;
+  self.subDelegate = nil;
+  self.subGwId = nil;
+  if (!act) return;
+  act.delegate = nil;
+  if (gwId.length) [act stopActiveSubDeviceWithGwId:gwId];
+  dispatch_async(dispatch_get_main_queue(), ^{ (void)act; });
+}
+
+// Step của activator nâng cao → onPairingProgress, cùng shape/tên với luồng Wi-Fi.
+- (void)emitAdvStep:(ThingActivatorStep)step model:(ThingSmartDeviceModel *)model error:(NSError *)error {
+  NSMutableDictionary *body = [@{ @"step": TuyaActivatorStepName(step), @"dataJson": @"" } mutableCopy];
+  if (model.devId.length) body[@"devId"] = model.devId;
+  if (error) {
+    body[@"errorCode"] = [@(error.code) stringValue];
+    body[@"errorMessage"] = error.localizedDescription ?: @"";
+    body[@"errorDomain"] = error.domain ?: @"";
+  }
+  [self emit:@"onPairingProgress" body:body];
+}
+
+- (void)emitGatewayFound:(NSString *)gwId productId:(NSString *)productId {
+  [self emit:@"onPairingProgress" body:@{
+    @"step": @"gateway_found",
+    @"dataJson": TuyaJsonString(@{ @"gwId": gwId ?: @"", @"productId": productId ?: @"" }),
+    @"devId": gwId ?: @"",
+  }];
+}
+
+- (void)emitStateError:(NSError *)error {
+  [self emit:@"onPairingProgress" body:@{
+    @"step": @"device_state_error",
+    @"dataJson": @"",
+    @"errorCode": [@(error.code) stringValue],
+    @"errorMessage": error.localizedDescription ?: @"",
+    @"errorDomain": error.domain ?: @"",
+  }];
 }
 
 - (void)dealloc {
   [ThingSmartActivator sharedInstance].delegate = nil;
   _comboActivator.bleWifiDelegate = nil;
+  _advActivator.delegate = nil;
+  [_advActivator stopConfigWiFi];
+  _subActivator.delegate = nil;
+  if (_subGwId.length) [_subActivator stopActiveSubDeviceWithGwId:_subGwId];
 }
 
 // addListener:/removeListeners: kế thừa từ RCTEventEmitter (TuyaEventEmitter) - không khai lại.
