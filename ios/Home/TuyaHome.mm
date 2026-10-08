@@ -1,17 +1,24 @@
 #import "TuyaHome.h"
+#import "TuyaReject.h"
 #import <ThingSmartHomeKit/ThingSmartKit.h>
 
-// TuyaHome (iOS) - WIRED: home CRUD (create/list/detail/update/dismiss) + weather sketch + change/status
+// TuyaHome (iOS) - WIRED: home CRUD (create/list/detail/update/dismiss) + weather sketch/detail + change/status
 // listeners (ThingSmartHomeManagerDelegate / ThingSmartHomeDelegate → emit onHomeChange).
-// Verbatim selectors: docs/research/tuya-home-sdk-home-management.md (section A iOS).
-// TODO: getHomeWeatherDetail (DashBoard/option model field chưa verbatim).
+// Verbatim selectors: docs/research/tuya-home-sdk-home-management.md (section A iOS). Weather detail verify trên
+// header ThingSmartHome+Weather.h / ThingSmartWeatherOptionModel.h / ThingSmartWeatherModel.h (DeviceKit 5.14.6).
 // ⚠️ Verify: ThingSmartHomeModel.role numeric (iOS ThingHomeRoleType có thể KHÁC scheme 2/1/0 của Android - chuẩn hoá sau);
 //    tên delegate method cấp home (home:didAddDeivce: / didRemoveDeivce: / homeDidUpdateInfo:) - note đánh dấu cần verify.
 
-static void TuyaTODO(NSString *what, RCTPromiseRejectBlock reject) {
-  reject(@"ios_todo",
-         [NSString stringWithFormat:@"iOS '%@' chưa wire - xem docs/research/tuya-home-sdk-home-management.md.", what],
-         nil);
+// Reject mang mã lỗi Tuya THẬT: NSError.code + localizedDescription (giống TuyaPairing) - không gom về literal.
+static void TuyaRejectNSError(RCTPromiseRejectBlock reject,
+                              NSError *error,
+                              NSString *fallbackCode,
+                              NSString *fallbackMessage) {
+  if (error) {
+    TuyaRejectWithDomain(reject, [@(error.code) stringValue], error.localizedDescription, @"sdk");
+  } else {
+    TuyaRejectWithDomain(reject, fallbackCode, fallbackMessage, @"sdk");
+  }
 }
 
 // ThingSmartHomeModel → HomeResult. role: raw iOS ThingHomeRoleType (⚠️ verify vs Android 2/1/0).
@@ -160,14 +167,72 @@ RCT_EXPORT_MODULE()
   } failure:^(NSError *e) { reject(@"weather_sketch_error", e.localizedDescription, e); }];
 }
 
+// limit = số CHỈ SỐ thời tiết tối đa (nhiệt độ/độ ẩm/UV/AQI...) - KHÔNG phải số ngày; 0 (= không set) → SDK
+// trả tất cả (theo header ThingSmartWeatherOptionModel).
+// unitJson {"tempUnit","pressureUnit","windspeedUnit"} (số nguyên, cùng mã với Android); key thiếu = 0 (unknown)
+// → SDK giữ đơn vị của lần gọi thành công trước. Dùng lat/lon của chính home. Trả JSON mảng - key giống
+// Android DashBoardBean (objId → id).
 - (void)getHomeWeatherDetail:(double)homeId
                        limit:(double)limit
                     unitJson:(NSString *)unitJson
                      resolve:(RCTPromiseResolveBlock)resolve
                       reject:(RCTPromiseRejectBlock)reject {
-  // intended: [home getHomeWeatherDetailWithOption:(ThingSmartWeatherOptionModel*) success:^(NSArray<ThingSmartWeatherModel*>*) ...]
-  //           ThingSmartWeatherModel field chưa verbatim → serialize TODO.
-  TuyaTODO(@"getHomeWeatherDetail", reject);
+  ThingSmartHome *home = [self homeOf:homeId];
+  if (!home) { TuyaRejectWithDomain(reject, @"no_home", @"Home not found.", @"sdk"); return; }
+
+  NSDictionary *units = @{};
+  if ([unitJson stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet].length > 0) {
+    NSData *data = [unitJson dataUsingEncoding:NSUTF8StringEncoding];
+    id parsed = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:nil] : nil;
+    if (![parsed isKindOfClass:[NSDictionary class]]) {
+      TuyaRejectWithDomain(reject, @"invalid_param",
+                           @"unitJson must be a JSON object {tempUnit, pressureUnit, windspeedUnit}", @"sdk");
+      return;
+    }
+    units = parsed;
+  }
+  NSUInteger unitValues[3] = {0, 0, 0};
+  NSArray<NSString *> *unitKeys = @[ @"tempUnit", @"pressureUnit", @"windspeedUnit" ];
+  for (NSUInteger i = 0; i < unitKeys.count; i++) {
+    id v = units[unitKeys[i]];
+    if (!v || v == [NSNull null]) continue;
+    if (![v isKindOfClass:[NSNumber class]] || [v integerValue] < 0) {
+      TuyaRejectWithDomain(reject, @"invalid_param",
+                           [NSString stringWithFormat:@"unitJson.%@ must be a non-negative integer", unitKeys[i]],
+                           @"sdk");
+      return;
+    }
+    unitValues[i] = (NSUInteger)[v integerValue];
+  }
+
+  ThingSmartWeatherOptionModel *option = [[ThingSmartWeatherOptionModel alloc] init];
+  option.limit = (NSInteger)limit;
+  option.temperatureUnit = (ThingSmartWeatherOptionTemperatureUnit)unitValues[0];
+  option.pressureUnit = (ThingSmartWeatherOptionPressureUnit)unitValues[1];
+  option.windspeedUnit = (ThingSmartWeatherOptionWindSpeedUnit)unitValues[2];
+
+  [home getHomeWeatherDetailWithOption:option success:^(NSArray<ThingSmartWeatherModel *> *list) {
+    NSMutableArray *out = [NSMutableArray array];
+    for (ThingSmartWeatherModel *w in list) {
+      [out addObject:@{
+        @"id": @(w.objId),
+        @"name": w.name ?: @"",
+        @"value": w.value ?: @"",
+        @"unit": w.unit ?: @"",
+        @"icon": w.icon ?: @"",
+        @"fieldName": w.fieldName ?: @"",
+        @"metaValue": w.metaValue ?: @"",
+        @"roomName": w.roomName ?: @"",
+        @"show": @(w.show),
+      }];
+    }
+    NSData *json = [NSJSONSerialization isValidJSONObject:out]
+                       ? [NSJSONSerialization dataWithJSONObject:out options:0 error:nil]
+                       : nil;
+    resolve(json ? [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding] : @"[]");
+  } failure:^(NSError *e) {
+    TuyaRejectNSError(reject, e, @"weather_detail_error", @"Failed to load home weather detail.");
+  }];
 }
 
 // ---------- Listeners ----------

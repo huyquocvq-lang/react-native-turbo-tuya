@@ -2,10 +2,11 @@ package com.jimmyvu.turbotuya.home
 
 // B10 mở rộng theo docs/research/tuya-home-sdk-home-management.md (verbatim) - CHƯA build-verify.
 // ⚠️ Verify import/chữ ký: WeatherBean + IIGetHomeWetherSketchCallBack (package + onFailure args),
-//    IThingHomeChangeListener/IThingHomeStatusListener (package .home.sdk.api?), unRegisterHomeStatusListener,
-//    DashBoardBean (getHomeWeatherDetail → để TODO vì field chưa rõ).
+//    IThingHomeChangeListener/IThingHomeStatusListener (package .home.sdk.api?), unRegisterHomeStatusListener.
+//    getHomeWeatherDetail: DashBoardBean + IGetHomeWetherCallBack đã verify trên jar SDK 7.5.6.
 
 import com.jimmyvu.turbotuya.NativeTuyaHomeSpec
+import com.jimmyvu.turbotuya.common.TuyaReject
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
@@ -15,14 +16,18 @@ import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.thingclips.smart.home.sdk.ThingHomeSdk
 import com.thingclips.smart.home.sdk.api.IThingHomeChangeListener
 import com.thingclips.smart.home.sdk.api.IThingHomeStatusListener
+import com.thingclips.smart.home.sdk.bean.DashBoardBean
 import com.thingclips.smart.home.sdk.bean.HomeBean
 import com.thingclips.smart.home.sdk.bean.WeatherBean
+import com.thingclips.smart.home.sdk.callback.IGetHomeWetherCallBack
 import com.thingclips.smart.home.sdk.callback.IIGetHomeWetherSketchCallBack
 import com.thingclips.smart.home.sdk.callback.IThingGetHomeListCallback
 import com.thingclips.smart.home.sdk.callback.IThingHomeResultCallback
 import com.thingclips.smart.sdk.api.IResultCallback
 import com.thingclips.smart.sdk.bean.DeviceBean
 import com.thingclips.smart.sdk.bean.GroupBean
+import org.json.JSONArray
+import org.json.JSONObject
 
 // TuyaHome - quản lý home (app dùng 1 nhà/user) + weather + listeners. Phát event onHomeChange.
 class TuyaHomeModule(reactContext: ReactApplicationContext) :
@@ -36,6 +41,9 @@ class TuyaHomeModule(reactContext: ReactApplicationContext) :
   companion object {
     const val NAME = NativeTuyaHomeSpec.NAME
     private const val EVT_HOME = "onHomeChange"
+    // Key đơn vị thời tiết (docs Tuya): tempUnit 1 °C/2 °F; pressureUnit 1 hPa/2 inHg/3 mmHg/4 mb;
+    // windspeedUnit 1 mph/2 m/s/3 kph/4 km/h.
+    private val WEATHER_UNIT_KEYS = listOf("tempUnit", "pressureUnit", "windspeedUnit")
   }
 
   private fun emit(params: WritableMap) {
@@ -151,12 +159,39 @@ class TuyaHomeModule(reactContext: ReactApplicationContext) :
     )
   }
 
+  // limit = số CHỈ SỐ thời tiết tối đa trả về (nhiệt độ/độ ẩm/UV/AQI...) - KHÔNG phải số ngày (docs Tuya).
+  // unitJson chỉ lấy 3 key WEATHER_UNIT_KEYS (số nguyên) → Map; SDK serialize thành `options` của
+  // thing.m.location.dashboard.list (lat/lon lấy từ ThingBaseSdk, không phải toạ độ home như iOS).
+  // Trả JSON mảng DashBoardBean - key giống iOS ThingSmartWeatherModel (objId → id).
   override fun getHomeWeatherDetail(homeId: Double, limit: Double, unitJson: String, promise: Promise) {
-    // intended: newHomeInstance(homeId).getHomeWeatherDetail(limit, unitMap, IGetHomeWetherCallBack)
-    //           → onSuccess(ArrayList<DashBoardBean>); field DashBoardBean chưa verbatim → serialize TODO.
-    promise.reject(
-      "not_implemented",
-      "getHomeWeatherDetail chưa wire (DashBoardBean field chưa rõ) - xem docs/research/tuya-home-sdk-home-management.md",
+    val units = mutableMapOf<String, Any>()
+    if (unitJson.isNotBlank()) {
+      val json = runCatching { JSONObject(unitJson) }.getOrNull()
+      if (json == null) {
+        TuyaReject.reject(promise, "invalid_param", "unitJson must be a JSON object {tempUnit, pressureUnit, windspeedUnit}")
+        return
+      }
+      for (key in WEATHER_UNIT_KEYS) {
+        val v = json.opt(key)
+        if (v == null || v == JSONObject.NULL) continue
+        if (v !is Number || v.toInt() < 0) {
+          TuyaReject.reject(promise, "invalid_param", "unitJson.$key must be a non-negative integer")
+          return
+        }
+        units[key] = v.toInt()
+      }
+    }
+    ThingHomeSdk.newHomeInstance(homeId.toLong()).getHomeWeatherDetail(
+      limit.toInt(), units,
+      object : IGetHomeWetherCallBack {
+        override fun onSuccess(result: MutableList<DashBoardBean>?) {
+          val arr = JSONArray()
+          result?.forEach { arr.put(weatherToJson(it)) }
+          promise.resolve(arr.toString())
+        }
+        override fun onFailure(code: String?, error: String?) =
+          TuyaReject.reject(promise, code ?: "weather_detail_error", error)
+      },
     )
   }
 
@@ -247,6 +282,18 @@ class TuyaHomeModule(reactContext: ReactApplicationContext) :
     m.putString("geoName", bean?.geoName ?: "")
     return m
   }
+
+  // DashBoardBean → 1 phần tử JSON của getHomeWeatherDetail (cùng key với iOS).
+  private fun weatherToJson(b: DashBoardBean): JSONObject = JSONObject()
+    .put("id", b.id)
+    .put("name", b.name ?: "")
+    .put("value", b.value ?: "")
+    .put("unit", b.unit ?: "")
+    .put("icon", b.icon ?: "")
+    .put("fieldName", b.fieldName ?: "")
+    .put("metaValue", b.metaValue ?: "")
+    .put("roomName", b.roomName ?: "")
+    .put("show", b.show ?: false)
 
   // DeviceBean → HomeDeviceItem (JS). getIsOnline() = LAN||cloud online.
   private fun deviceToMap(bean: DeviceBean): WritableMap {

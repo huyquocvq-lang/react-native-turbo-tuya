@@ -60,7 +60,8 @@ export interface Spec extends TurboModule {
     lon: number,
     lat: number
   ): Promise<WeatherSketch>;
-  // limit = số ngày; unitJson = {"tempUnit","pressureUnit","windspeedUnit"}; trả JSON mảng theo ngày (DashBoardBean).
+  // limit = số chỉ số thời tiết tối đa (nhiệt độ, độ ẩm…), KHÔNG phải số ngày; unitJson = {"tempUnit","pressureUnit",
+  // "windspeedUnit"} (số nguyên ≥ 0). Trả JSON mảng [{id,name,value,unit,icon,fieldName,metaValue,roomName,show}].
   getHomeWeatherDetail(
     homeId: number,
     limit: number,
