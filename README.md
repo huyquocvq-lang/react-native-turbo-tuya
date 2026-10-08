@@ -2,28 +2,24 @@
 
 React Native **Turbo Native Module** wrapping the Tuya Smart Life App SDK (Wi-Fi + BLE) for the ice-bath app.
 
-Split by feature into **12 independent TurboModules** (one Codegen spec each). Legend: ✅ wired · ◑ partial / skeleton · ❌ typed TODO.
+Split by feature into **12 independent TurboModules** (one Codegen spec each). Legend: ✅ wired · ❌ not available in that platform's Tuya SDK (rejects with `not_implemented` on Android / `ios_todo` on iOS).
 
 | Module | API group | Android | iOS |
 |---|---|---|---|
 | `TuyaCore` | init / version / destroy | ✅ | ✅ |
-| `TuyaAuth` | email + 3rd-party login, profile, session *(events)* | ✅ | ✅ email-login + profile/session · ◑ code-login/3rd-party |
-| `TuyaHome` | home CRUD + weather + change/status listeners *(events)* | ✅ | ✅ · ◑ weather-detail |
-| `TuyaDevice` | DP control + status + device management *(events)* | ✅ | ✅ DP/status/snapshot/rename · ◑ BLE/await-ack |
-| `TuyaPairing` | Wi-Fi EZ/AP, BLE, combo BLE+Wi-Fi, auto-token; advanced sub-device/gateway/QR/wired *(events)* | ✅ core · ◑ advanced | ✅ core · ◑ advanced |
-| `TuyaOta` | firmware check / upgrade + auto-switch *(events)* | ✅ | ✅ check/start/cancel + progress · ◑ auto-switch |
-| `TuyaScene` | scenes + automations (conditions/actions) *(events)* | ◑ skeleton | ◑ list/execute/enable/disable/delete |
-| `TuyaTimer` | cloud schedules (add/update/remove/status) | ✅ · ◑ list | ◑ list/remove |
-| `TuyaMessage` | push status + message center + DND | ✅ · ◑ list/by-type | ◑ push + DND on/off |
-| `TuyaMember` | home members + invitation + transfer owner | ◑ | ◑ query/remove/process/transfer |
-| `TuyaMatter` | Matter device pairing *(events)* | ◑ skeleton (intended-call) | ◑ skeleton (verbatim intended-call) |
-| `TuyaMesh` | BLE SIG / Tuya mesh *(events)* | ◑ create/list/DP intended-call | ✅ create/list/DP/client/search/activate (best-effort) |
+| `TuyaAuth` | email (password or code) + 3rd-party login, profile, session, login terminals *(events)* | ✅ · ❌ unbind / list linked 3rd-party accounts | ✅ · ❌ bind / unbind / list linked 3rd-party accounts |
+| `TuyaHome` | home CRUD + weather + change/status listeners *(events)* | ✅ | ✅ |
+| `TuyaDevice` | DP control + status + device management + BLE + cached DPs *(events)* | ✅ | ✅ |
+| `TuyaPairing` | Wi-Fi EZ/AP, BLE, combo BLE+Wi-Fi, auto-token, sub-device, gateway, QR, wired *(events)* | ✅ | ✅ |
+| `TuyaOta` | firmware check / upgrade / warnings + auto-upgrade switch *(events)* | ✅ | ✅ |
+| `TuyaScene` | tap-to-run scenes + automations (conditions/actions) *(events)* | ✅ | ✅ · ❌ `enableAutomationWithTime` |
+| `TuyaTimer` | cloud schedules (add/update/remove/status) | ✅ | ✅ |
+| `TuyaMessage` | push status + message center + do-not-disturb | ✅ · ❌ `unregisterDevice` | ✅ |
+| `TuyaMember` | home members + invitations + transfer owner | ✅ | ✅ |
+| `TuyaMatter` | Matter device pairing *(events)* | ✅ | ✅ (needs the Matter pods, see [Matter](#12-matter)) |
+| `TuyaMesh` | Bluetooth SIG / Tuya mesh *(events)* | ✅ | ✅ (no DP/status events) |
 
-> **Status:** Nothing device-tested yet (building needs JDK 17 + Android SDK for Android, macOS + Xcode for iOS).
-> **Android** wires the common flows (Core, Auth, Home incl. weather/listeners, Device, OTA, Pairing core + combo/auto-token, and most of Scene-adjacent Timer/Message/Member). Items marked ◑ *skeleton* (Scene, Matter, Mesh, advanced pairing) and a few bean/enum-dependent methods are **typed stubs that reject with `not_implemented` and carry the exact intended SDK call in a comment** - their underlying Tuya APIs weren't captured verbatim, so they're wired on a real-SDK machine.
-> **iOS**: the full ice-bath happy path is wired - `TuyaCore.initSdk`, `TuyaAuth` (email send-code/login/register + profile/session), `TuyaHome` (CRUD + weather + listeners), `TuyaPairing` (token + Wi-Fi EZ/AP + BLE + combo + auto-token) and `TuyaDevice` (DP control + status + snapshot + rename/remove). Also partially wired on iOS: `TuyaOta` (check/start/cancel + progress), `TuyaScene` (list/execute/enable/disable/delete), `TuyaTimer` (list/remove), `TuyaMessage` (push status + DND on/off). `TuyaMember` is partially wired too (query/remove/processInvitation/transferHomeOwner). Still TODO on iOS: Auth code-login/3rd-party, advanced pairing, OTA auto-switch, Scene save/build, Timer add/update, Message list/DND-write, Member add/update + invitation, and a few Device extras (BLE/await-ack). **`TuyaMesh`**: the spec now carries `homeId` + `meshType` ('sig'|'tuya'), and **iOS is wired best-effort** (create/list/DP via `ThingSmartBleMesh`; client/search/activate via `ThingSmartSIGMeshManager` / `ThingBLEMeshManager`) per the verbatim in the Tuya iOS Matter/Mesh SDK docs - flagged ⚠️ for on-device verification of model properties. Android Mesh signatures match the spec but bodies stay intended-call (SDK import packages aren't in the docs).
-
-**`TuyaMatter`**: documented skeleton on both platforms with verbatim intended-calls. iOS uses a *unified* `ThingSmartActivatorDiscovery` flow (≠ Android's dedicated `IMatterActivator`); full wiring is blocked on one open detail (how to construct `ThingSmartActivatorTypeMatterModel`) + Android import packages. Ice-bath devices almost certainly don't use Matter, so this is left as a documented follow-up. The event infrastructure (`RCTEventEmitter`) is in place for every event-emitting module.
+> **Status:** the flows used by the ice-bath app this library was built for (init, auth, homes, Wi-Fi/BLE/combo pairing, DP control, cloud timers, push and the message center) have been tested on real devices. Everything else is wired against the exact SDK versions (Tuya Android SDK 7.5.6 and the iOS pods the app ships) and compiles on both platforms, but hasn't run on hardware yet: scenes, Matter, mesh, members and invitations, do-not-disturb, sub-device/gateway/QR/wired pairing, BLE connect/disconnect and cached DPs. Treat those as beta and please report issues.
 
 ## Installation
 
@@ -158,7 +154,7 @@ await Tuya.resetEmailPassword(CC, email, code, newPassword);
 await Tuya.logout();
 ```
 
-`sendVerifyCode` types: `1` register · `2` log in with a code · `3` reset password · `8` unregister (delete the account). Logging in with a code (`loginWithEmailCode`) works on Android only for now; iOS rejects with `ios_todo`.
+`sendVerifyCode` types: `1` register · `2` log in with a code · `3` reset password · `8` unregister (delete the account). To log in with a code instead of a password, call `loginWithEmailCode(CC, email, code)` after a type-`2` code.
 
 **Social login** - pass the provider's token to `thirdLogin(countryCode, token, type, extraInfo)`:
 
@@ -321,7 +317,13 @@ useEffect(() => watchDevice(devId, (changed) => setDps((prev) => ({ ...prev, ...
 | `isDeviceOnline(devId)` | Live online state. The `isOnline` flag from `getHomeDeviceList` can be stale on iOS. |
 | `renameDevice(devId, name)` | Renames the device in the Tuya cloud, so every app on the account sees the new name. |
 | `removeDevice(devId)` | Removes the device from the user's home. This is not a factory reset. |
-| `resetFactory(devId)` | Factory reset. Android only for now; iOS rejects with `ios_todo`. |
+| `resetFactory(devId)` | Factory reset. |
+| `queryDp(devId, dpId)` | Asks the device to report one DP; the value arrives through `onDeviceStatus`. |
+| `publishDpsWithChannels(devId, dpsJson, channels)` | Sends through specific channels in priority order: `'lan'`, `'cloud'` (MQTT), `'ble'`, `'sigmesh'`, `'mesh'`, … |
+| `bleConnect(devId)` / `bleDisconnect(devId)` / `isBleLocalOnline(devId)` | Local Bluetooth connection. Android 12+ needs the `BLUETOOTH_CONNECT` permission. |
+| `sendCacheDps(devId, dpsJson, validitySec, dpCacheType)` | Queues DPs for a sleeping low-power device (`dpCacheType` `0` = device pulls, `1` = cloud pushes). |
+| `getWifiSignal(devId)` | Wi-Fi signal strength in dBm. |
+| `isCloudConnected()` | Whether the SDK's MQTT connection is up. |
 
 ### 6. Schedules (cloud timers)
 
@@ -369,7 +371,7 @@ if (available.length > 0) {
 }
 ```
 
-Cancel with `cancelFirmwareUpgrade(devId, type)`. `confirmWarningUpgrade` and the auto-upgrade switch are Android only for now.
+Cancel with `cancelFirmwareUpgrade(devId, type)`. When the device warns before upgrading (for example about a weak signal), answer with `confirmWarningUpgrade(devId, isContinue)`. `getAutoUpgradeSwitch(devId)` / `setAutoUpgradeSwitch(devId, state)` read and set automatic upgrades (`0` off, `1` on).
 
 ### 8. Push notifications and the message center
 
@@ -391,6 +393,116 @@ const page = await Tuya.getMessageList(0, 20); // { list, offset, limit, hasMore
 await Tuya.deleteMessages(page.list.map((m) => m.id));
 ```
 
+Do-not-disturb silences device alerts for set periods:
+
+```ts
+await Tuya.setDndStatus(true);                                                  // master switch
+const id = await Tuya.addDnd('22:00', '07:00', '1111111', true, []);            // recurring, all devices
+await Tuya.addOnceDnd('2026-12-24 20:00', '2026-12-25 09:00', false, [devId]);  // one-time, one device
+const recurring = await Tuya.getDndList();                                      // getOnceDndList() for one-time periods
+await Tuya.removeDnd(id);
+```
+
+> ⚠️ The weekday order inside DND `loops` isn't confirmed yet: Tuya's iOS helper builds it Monday-first, while the Android docs describe Sunday-first. `'1111111'` (every day) is safe either way; check single days on a device before relying on them.
+
+### 9. Scenes and automations
+
+A scene is either tap-to-run (`ruleGenre: 1`) or an automation (`ruleGenre: 2`) that runs when its conditions match. Build each condition and action with the `build…` helpers, then save:
+
+```ts
+await Tuya.getHomeDetail(homeId); // the builders read DP types from the cached device schema
+
+const when = await Tuya.buildDeviceCondition(sensorId, '1', '==', 'true'); // devId, dpId, op, value
+const then = await Tuya.buildDeviceAction(lightId, '1', 'true');           // devId, dpId, value
+
+const scene = await Tuya.saveScene(homeId, JSON.stringify({
+  name: 'Light on when the door opens',
+  ruleGenre: 2,                           // 1 = tap-to-run, 2 = automation
+  matchType: 1,                           // 1 = any condition, 2 = all conditions
+  background: '',
+  conditionsJson: JSON.stringify([when]), // '[]' for tap-to-run
+  actionsJson: JSON.stringify([then]),
+  preConditionsJson: '[]',
+}));
+```
+
+- Values are always strings. `op` is `'=='`, `'<'`, `'>'`, `'<='` or `'>='` for value DPs and only `'=='` for bool and enum DPs. Value DPs take the raw integer the device reports (before `scale`).
+- Other builders: `buildTimerCondition`, `buildWeatherCondition`, `buildGeofenceCondition`, `buildDelayAction`, `buildTriggerSceneAction`, `buildAutomationToggleAction`, `buildNotificationAction`. `getConditionDeviceList` / `getActionDeviceList` list the devices you can use.
+- The JSON from the builders and from `getSceneDetail` is the SDK's own format and differs between iOS and Android. Treat it as opaque and don't reuse it across platforms. `getSceneDetail` output can go straight back into `modifyScene`, which only changes the keys you pass.
+- Run a tap-to-run scene with `executeScene(homeId, sceneId)`; switch automations with `enableAutomation` / `disableAutomation`. `enableAutomationWithTime` is Android only.
+- Weather: `getCityListByCountryCode` only covers mainland China (per Tuya's docs); elsewhere use `getCityByLocation(lat, lon)`.
+- Geofence automations: iOS registers location monitoring itself when the scene is saved. On Android the app has to register the geofence, which this library doesn't expose yet.
+
+### 10. Members and invitations
+
+```ts
+const members = await Tuya.queryMembers(homeId);
+const invite = await Tuya.createInvitation(homeId); // { invitationId, code } - share the code
+await Tuya.joinHomeByCode(invite.code);             // run on the invitee's account
+await Tuya.addMember(homeId, account, CC, 'Alex', 0, false, false); // role 0 member · 1 admin; autoAccept false = send an invitation
+```
+
+- The role decides admin rights; both SDKs ignore the `admin` argument of `addMember`.
+- `getInvitationList(homeId)` returns a JSON string of `{ invitationId, invitationCode, name, role, dealStatus, validTime }` (`validTime` in hours). Manage them with `updateInvitedMember` and `cancelInvitation`.
+- Only the owner can hand the home over: `transferHomeOwner(homeId, memberId)`.
+
+### 11. More pairing modes
+
+| Device | Call | Needs |
+|---|---|---|
+| Zigbee/BLE sub-device behind a gateway | `startSubDevicePairing(gatewayDevId, timeoutSec)`; each device arrives as `onPairingProgress` step `subdevice_found` | the gateway online; no token |
+| Wi-Fi gateway | `startGatewayPairing(gatewayDevId, productId, token, timeoutSec)` | phone and gateway on the same LAN, a fresh `getPairingToken` |
+| Wired device | `startWiredPairing(homeId, token, timeoutSec)` | the same LAN and a fresh token; resolves with the first device found |
+| Device with a QR code that is already online (e.g. 4G) | `startQrPairing(homeId, '', qrContent, timeoutSec)` | the raw QR content |
+
+Only one gateway, QR or wired pairing runs at a time. `destroyActivator()` stops them; the pending call rejects with `pairing_cancelled`.
+
+### 12. Matter
+
+```ts
+import { Tuya, onMatterDeviceFound, onMatterAttestation } from '@jimmy2k/react-native-turbo-tuya';
+
+await Tuya.parseMatterSetupCode(qrOrManualCode); // QR content or the manual pairing code
+const found = onMatterDeviceFound((e) => {
+  const info = JSON.parse(e.dataJson ?? '{}');   // info.deviceType: 'wifi' | 'thread' | …
+});
+// Fires when the device fails attestation (not certified): continue only if the user accepts it
+const attest = onMatterAttestation(async () => Tuya.continueMatterCommissioning(await askUserToContinue()));
+await Tuya.connectMatterDevice(homeId, 120);
+const token = await Tuya.getPairingToken(homeId);
+const device = await Tuya.commissionMatterDevice(homeId, token, ssid, wifiPassword, 120); // Wi-Fi details only for Wi-Fi devices
+found.remove();
+attest.remove();
+```
+
+Android needs nothing extra. On iOS the Matter implementation isn't part of the base SDK, so without this setup every call rejects with `matter_unavailable` ([Tuya's guide](https://developer.tuya.com/en/docs/app-development/matter_device_management?id=Kcr4lk8akert0)):
+
+1. Add `pod 'ThingSmartMatterKit'` to the app target, and create a Matter Extension target (Swift, iOS 16.1+) with `pod 'ThingSmartMatterExtensionKit'`.
+2. Capabilities: **Matter Allow Setup Payload**, **App Groups** (the same group on the app and the extension) and **Background Modes → Uses Bluetooth LE accessories**.
+3. `Info.plist`: `NSBonjourServices` with `_meshcop._udp`, `_matter._tcp`, `_matterc._udp`, `_matterd._udp`, plus the Bluetooth usage string.
+4. Right after the app starts, call `[ThingSmartMatterActivatorConfig setMatterConfigKey:@"<your App Group>"]`; in the extension, `ThingMatterExtensionSupport.shared.setMatterConfigKey(configKey:)`.
+
+iOS fetches its own pairing token, so the `token` argument only matters on Android.
+
+### 13. Bluetooth mesh
+
+```ts
+import { Tuya, onMeshDeviceFound } from '@jimmy2k/react-native-turbo-tuya';
+
+await Tuya.getHomeDetail(homeId);                       // meshes and their devices come from the home cache
+const [mesh] = await Tuya.getMeshList(homeId);          // or createSigMesh(homeId, name) / createTuyaMesh(homeId, name)
+Tuya.startMeshClient(homeId, mesh.meshId, mesh.type, 30); // type 'sig' or 'tuya'
+
+const found = onMeshDeviceFound((e) => console.log(JSON.parse(e.dataJson ?? '{}'))); // { mac, name, productId, … }
+Tuya.searchMeshSubDevices(homeId, mesh.meshId, mesh.type, 60);
+const node = await Tuya.activateMeshSubDevice(homeId, mesh.meshId, mesh.type, mac, 120); // mac exactly as the event gave it
+await Tuya.publishMeshDps(homeId, mesh.meshId, mesh.type, node.nodeId, pcc, JSON.stringify({ '1': true }));
+```
+
+- `pcc` is the device's mesh category code; Android passes it to the SDK and iOS doesn't need it.
+- Tuya mesh activation covers sub-devices only. Mesh gateways pair through the Wi-Fi flows.
+- iOS doesn't emit `onMeshDpUpdate` / `onMeshStatusChanged` yet.
+
 ### Handling errors
 
 Every method rejects with the same shape:
@@ -411,7 +523,11 @@ Library codes:
 | `no_device` | The device isn't in the SDK cache. Reload the home and retry. |
 | `ble_scan_required` | Bluetooth pairing was called without a scan result for that `uuid`. |
 | `ack_timeout` | `publishDpsAwaitAck` got no confirmation in time. |
-| `ios_todo` / `not_implemented` | The method isn't wired on this platform yet (iOS / Android). |
+| `invalid_param` / `invalid_channel` | An argument doesn't have the expected format. |
+| `ble_permission_denied` | Android 12+: the app hasn't been granted `BLUETOOTH_CONNECT`. |
+| `pairing_cancelled` | A newer gateway/QR/wired pairing call or `destroyActivator()` replaced this one. |
+| `matter_unavailable` | iOS: the Matter pods aren't installed (see [Matter](#12-matter)). |
+| `ios_todo` / `not_implemented` | The platform's Tuya SDK has no API for this method (see the status table). The message says why. |
 
 Library messages are written for developers, so map these codes to your own text before showing them to users.
 
@@ -449,8 +565,12 @@ Each `on…` helper returns a subscription; call `remove()` when you're done. Mo
 | `onHomeChange` | `startHomeChangeListener()` for homes, `startHomeStatusListener(homeId)` for the devices in one home | `stopHomeChangeListener()` / `stopHomeStatusListener(homeId)` |
 | `onSessionExpired` | always on | - |
 | `onOtaProgress`, `onOtaStatusChanged`, `onOtaSuccess`, `onOtaFailure` | `startFirmwareUpgrade(devId, types)` | - |
+| `onSceneChange` | `registerSceneChangeListener()`. Android reports add/update/delete/enable/disable; iOS only enable/disable | `unregisterSceneChangeListener()` |
+| `onMatterDeviceFound`, `onMatterAttestation`, `onMatterError` | `startDiscovery()` / `connectDevice(...)` | `stopDiscovery()` / `cancelActivator()` |
+| `onMeshDeviceFound` | `searchSubDevices(...)` | `stopMeshClient(...)` |
+| `onMeshDpUpdate`, `onMeshStatusChanged` | Android only, while `startMeshClient(...)` runs | `stopMeshClient(...)` |
 
-`onSceneChange`, `onMatter…` and `onMesh…` belong to the partial modules in the status table above. The raw event names are exported as `TuyaEvents`.
+The raw event names are exported as `TuyaEvents`.
 
 ### Testing with Jest
 
@@ -483,7 +603,7 @@ yarn        # install workspace
 yarn example android   # or: yarn example ios
 ```
 
-Methods marked ◑/skeleton reject with `not_implemented`; the demo surfaces that in its console (expected until they're wired on a real-SDK machine).
+The few methods a platform's SDK doesn't support reject with `not_implemented` / `ios_todo`; the demo shows that in its console.
 
 ## Architecture
 
