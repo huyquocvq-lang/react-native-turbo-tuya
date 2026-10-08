@@ -1,16 +1,35 @@
 #import "TuyaAuth.h"
+#import "TuyaReject.h"
 #import <ThingSmartHomeKit/ThingSmartKit.h>
 
 // TuyaAuth (iOS) - profile/session/reset/cancel/multi-device + email send-code/login/register theo selector
 // (docs/research/tuya-home-sdk-user-account.md). thirdLogin ĐÃ wire (loginByAuth2WithType:, 2026-07-02,
-// docs/research/tuya-ios-third-party-login.md). loginWithEmailCode + bind/getLinked VẪN TODO.
+// docs/research/tuya-ios-third-party-login.md). loginWithEmailCode + updateAvatarByUrl đã wire (verify header
+// ThingSmartUser.h - ThingSmartBaseKit 5.8.12). bind/unbind/getLinked third-party: SDK iOS KHÔNG có API → stub.
 // ⚠️ loginByEmail/registerByEmail là selector chuẩn Tuya (KHÔNG có verbatim trong note) - verify khi build;
 //    sendVerifyCode dùng ThingSuccessBlock (signature void/id verify trên header).
-static void TuyaTODO(NSString *what, RCTPromiseRejectBlock reject) {
-  reject(@"ios_todo",
-         [NSString stringWithFormat:@"iOS '%@' chưa wire - xem docs/research/tuya-home-sdk-user-account.md.", what],
-         nil);
+
+// Reject mang mã lỗi Tuya THẬT: NSError.code + localizedDescription (giống TuyaPairing) - không gom về literal.
+static void TuyaRejectNSError(RCTPromiseRejectBlock reject,
+                              NSError *error,
+                              NSString *fallbackCode,
+                              NSString *fallbackMessage) {
+  if (error) {
+    TuyaRejectWithDomain(reject, [@(error.code) stringValue], error.localizedDescription, @"sdk");
+  } else {
+    TuyaRejectWithDomain(reject, fallbackCode, fallbackMessage, @"sdk");
+  }
 }
+
+// API không tồn tại trong SDK iOS đang dùng → giữ mã 'ios_todo' (README) nhưng message nói rõ lý do.
+static void TuyaUnsupported(NSString *what, NSString *why, RCTPromiseRejectBlock reject) {
+  TuyaRejectWithDomain(reject, @"ios_todo",
+                       [NSString stringWithFormat:@"%@ is not available on iOS: %@", what, why], @"sdk");
+}
+
+static NSString *const kNoThirdPartyApi =
+    @"the Tuya iOS SDK in use (ThingSmartHomeKit 7.5.0.4 / ThingSmartBaseKit 5.8.12) has no API to bind, unbind "
+    @"or list third-party accounts on a logged-in user (ThingSmartUser only offers loginByAuth2WithType:)";
 
 static NSDictionary *TuyaUserMap(ThingSmartUser *u) {
   return @{
@@ -97,7 +116,16 @@ RCT_EXPORT_MODULE()
                      email:(NSString *)email
                       code:(NSString *)code
                    resolve:(RCTPromiseResolveBlock)resolve
-                    reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"loginWithEmailCode", reject); }
+                    reject:(RCTPromiseRejectBlock)reject {
+  // Code lấy từ sendVerifyCode(type 2). Selector verify trên header: loginWithEmail:countryCode:code:success:failure:.
+  [[ThingSmartUser sharedInstance] loginWithEmail:email
+                                      countryCode:countryCode
+                                             code:code
+                                          success:^{ resolve(TuyaUserMap([ThingSmartUser sharedInstance])); }
+                                          failure:^(NSError *e) {
+    TuyaRejectNSError(reject, e, @"login_error", @"Email verification-code login failed.");
+  }];
+}
 
 - (void)thirdLogin:(NSString *)countryCode
              token:(NSString *)token
@@ -183,8 +211,16 @@ RCT_EXPORT_MODULE()
 - (void)updateAvatarByUrl:(NSString *)imageUrl
                   resolve:(RCTPromiseResolveBlock)resolve
                    reject:(RCTPromiseRejectBlock)reject {
-  // updateAvatarWithImageUrl: DEPRECATED bởi Tuya - ưu tiên avatar preset. Để TODO.
-  TuyaTODO(@"updateAvatarByUrl (deprecated)", reject);
+  // SDK nhận thẳng URL → không cần tải ảnh về native. API bị Tuya đánh dấu deprecated ("maintain user avatar
+  // by yourself"): server có thể trả USER_AVATAR_UPLOAD_REJECT_FOR_CUSTOMIZE → reject nguyên mã/lời SDK.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+  [[ThingSmartUser sharedInstance] updateAvatarWithImageUrl:imageUrl
+                                                    success:^{ resolve(nil); }
+                                                    failure:^(NSError *e) {
+    TuyaRejectNSError(reject, e, @"update_avatar_error", @"Avatar update failed.");
+  }];
+#pragma clang diagnostic pop
 }
 
 // ---------- Login identity: bind/change email or phone via OTP ----------
@@ -282,19 +318,24 @@ RCT_EXPORT_MODULE()
                                                 failure:^(NSError *e) { reject(@"reset_phone_pw_error", e.localizedDescription, e); }];
 }
 
-// ---------- Third-party bind (chưa có selector verbatim iOS - TODO) ----------
+// ---------- Third-party bind/unbind/list ----------
+// Đã soát toàn bộ header Thing* trong Pods + binary ThingSmartBaseKit: không có selector bind/unbind/list và
+// không có API name thing.m.user.third.bind (Android 7.5.6 có IThingUser.bindThirdPlatform; unbind/list thì
+// cả 2 nền tảng đều không có).
 - (void)bindThirdParty:(NSString *)provider
                  token:(NSString *)token
              extraInfo:(NSString *)extraInfo
                resolve:(RCTPromiseResolveBlock)resolve
-                reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"bindThirdParty", reject); }
+                reject:(RCTPromiseRejectBlock)reject { TuyaUnsupported(@"bindThirdParty", kNoThirdPartyApi, reject); }
 
 - (void)unbindThirdParty:(NSString *)provider
                  resolve:(RCTPromiseResolveBlock)resolve
-                  reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"unbindThirdParty", reject); }
+                  reject:(RCTPromiseRejectBlock)reject { TuyaUnsupported(@"unbindThirdParty", kNoThirdPartyApi, reject); }
 
 - (void)getLinkedThirdParties:(RCTPromiseResolveBlock)resolve
-                       reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"getLinkedThirdParties", reject); }
+                       reject:(RCTPromiseRejectBlock)reject {
+  TuyaUnsupported(@"getLinkedThirdParties", kNoThirdPartyApi, reject);
+}
 
 // ---------- Multi-device login ----------
 - (void)getLoginTerminals:(RCTPromiseResolveBlock)resolve

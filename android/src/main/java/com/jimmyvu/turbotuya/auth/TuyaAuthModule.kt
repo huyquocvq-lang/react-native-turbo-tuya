@@ -5,17 +5,23 @@ package com.jimmyvu.turbotuya.auth
 // TempUnitEnum, INeedLoginListener (package com.thingclips.* có thể lệch theo bản SDK 7.5.x).
 
 import com.jimmyvu.turbotuya.NativeTuyaAuthSpec
+import com.jimmyvu.turbotuya.common.TuyaReject
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.WritableMap
 import com.facebook.react.modules.core.DeviceEventManagerModule
+import com.thingclips.smart.android.user.api.IBooleanCallback
 import com.thingclips.smart.android.user.api.ILoginCallback
 import com.thingclips.smart.android.user.api.ILogoutCallback
 import com.thingclips.smart.android.user.api.IReNickNameCallback
 import com.thingclips.smart.android.user.api.IRegisterCallback
 import com.thingclips.smart.android.user.api.IResetPasswordCallback
+import com.thingclips.smart.android.user.api.IThirdBindCallback
+import com.thingclips.smart.android.user.api.IUserBusinessCallback
+import com.thingclips.smart.android.user.bean.BindResultBean
 import com.thingclips.smart.android.user.bean.User
+import com.thingclips.smart.android.user.bean.UserLoginMultiterminalVO
 import com.thingclips.smart.home.sdk.ThingHomeSdk
 import com.thingclips.smart.sdk.api.INeedLoginListener
 import com.thingclips.smart.sdk.api.IResultCallback
@@ -48,11 +54,15 @@ class TuyaAuthModule(reactContext: ReactApplicationContext) :
       .emit(event, params)
   }
 
-  private fun todo(promise: Promise, what: String) {
-    promise.reject(
-      "not_implemented",
-      "$what chưa wire (cần verify chữ ký native) - xem docs/research/tuya-home-sdk-user-account.md",
-    )
+  // API không tồn tại trong SDK Android 7.5.6 → giữ mã 'not_implemented' (README) nhưng nói rõ lý do.
+  private fun unsupported(promise: Promise, what: String, why: String) =
+    TuyaReject.reject(promise, "not_implemented", "$what is not available on Android: $why")
+
+  // SDK bỏ qua callback (không gọi onError) ở vài API khi user == null → chặn trước để promise không treo.
+  private fun requireUser(promise: Promise): User? {
+    val u = ThingHomeSdk.getUserInstance().user
+    if (u == null) TuyaReject.reject(promise, "no_user", "Not logged in")
+    return u
   }
 
   // ---------- Auth: email ----------
@@ -189,9 +199,13 @@ class TuyaAuthModule(reactContext: ReactApplicationContext) :
   }
 
   override fun updateAvatarByUrl(imageUrl: String, promise: Promise) {
-    // updateAvatarWithImageUrl(url, IBooleanCallback) - DEPRECATED bởi Tuya (rủi ro compliance).
-    // Ưu tiên avatar preset; để TODO tránh phụ thuộc API deprecated + IBooleanCallback.
-    todo(promise, "updateAvatarByUrl (deprecated)")
+    // SDK nhận thẳng URL → không cần tải ảnh về native. ⚠️ Tuya khuyến nghị app tự quản lý avatar (iOS đã
+    // deprecate API này): server có thể trả USER_AVATAR_UPLOAD_REJECT_FOR_CUSTOMIZE → reject nguyên mã SDK.
+    ThingHomeSdk.getUserInstance().updateAvatarWithImageUrl(imageUrl, object : IBooleanCallback {
+      override fun onSuccess() = promise.resolve(null)
+      override fun onError(code: String?, error: String?) =
+        TuyaReject.reject(promise, code ?: "update_avatar_error", error)
+    })
   }
 
   // ---------- Login identity: bind/change email or phone via OTP ----------
@@ -297,22 +311,73 @@ class TuyaAuthModule(reactContext: ReactApplicationContext) :
     )
   }
 
-  // ---------- Third-party bind (bindThirdPlatform 5 String - thứ tự param chưa rõ → TODO verify) ----------
-  override fun bindThirdParty(provider: String, token: String, extraInfo: String, promise: Promise) =
-    todo(promise, "bindThirdParty")
+  // ---------- Third-party bind ----------
+  override fun bindThirdParty(provider: String, token: String, extraInfo: String, promise: Promise) {
+    val user = requireUser(promise) ?: return
+    // Thứ tự 5 String verify từ bytecode SDK 7.5.6 (→ API thing.m.user.third.bind v1.0):
+    // (countryCode, type, accessToken, extraInfo, options). Spec không có countryCode → dùng phoneCode
+    // (mã quốc gia) của user đang login. extraInfo '' → null (SDK bỏ key, giống iOS thirdLogin truyền nil);
+    // options để null (SDK không có giá trị mặc định cho bind).
+    ThingHomeSdk.getUserInstance().bindThirdPlatform(
+      user.phoneCode ?: "", provider, token, extraInfo.ifEmpty { null }, null,
+      object : IThirdBindCallback {
+        override fun onSuccess(result: BindResultBean?) = promise.resolve(null)
+        override fun onError(code: String?, error: String?) =
+          TuyaReject.reject(promise, code ?: "bind_third_error", error)
+      },
+    )
+  }
 
+  // SDK 7.5.6 KHÔNG có unbind/list: IThingUser chỉ có bindThirdPlatform, và không jar nào chứa API name
+  // third.unbind / third.list (đã soát toàn bộ jar 7.5.6).
   override fun unbindThirdParty(provider: String, promise: Promise) =
-    todo(promise, "unbindThirdParty")
+    unsupported(
+      promise, "unbindThirdParty",
+      "Tuya Home SDK 7.5.6 has no unbind API for third-party accounts (IThingUser only exposes bindThirdPlatform)",
+    )
 
   override fun getLinkedThirdParties(promise: Promise) =
-    todo(promise, "getLinkedThirdParties")
+    unsupported(
+      promise, "getLinkedThirdParties",
+      "Tuya Home SDK 7.5.6 has no API that lists the third-party accounts linked to the current user",
+    )
 
-  // ---------- Multi-device (Android chưa có signature verbatim - TODO verify) ----------
-  override fun getLoginTerminals(promise: Promise) =
-    todo(promise, "getLoginTerminals (Android)")
+  // ---------- Multi-device login ----------
+  override fun getLoginTerminals(promise: Promise) {
+    requireUser(promise) ?: return
+    // → m.life.user.terminal.login.list (UserLoginMultiterminalVO.terminalLoginList) - cùng field với iOS.
+    ThingHomeSdk.getUserInstance().getUserLoginMultiTerminal(
+      object : IUserBusinessCallback<UserLoginMultiterminalVO> {
+        override fun onSuccess(result: UserLoginMultiterminalVO?) {
+          val arr = Arguments.createArray()
+          result?.terminalLoginList?.forEach { t ->
+            arr.pushMap(Arguments.createMap().apply {
+              putString("terminalId", t.terminalId ?: "")
+              putString("platform", t.platform ?: "")
+              putString("os", t.os ?: "")
+              putDouble("loginTime", (t.loginTime ?: 0L).toDouble())
+            })
+          }
+          promise.resolve(arr)
+        }
+        override fun onError(code: String?, error: String?) =
+          TuyaReject.reject(promise, code ?: "login_terminals_error", error)
+      },
+    )
+  }
 
-  override fun terminateSession(terminalId: String, logoutCode: String, promise: Promise) =
-    todo(promise, "terminateSession (Android)")
+  override fun terminateSession(terminalId: String, logoutCode: String, promise: Promise) {
+    requireUser(promise) ?: return
+    // logoutMultiTerminal(terminalId, loginOutCode) → m.life.user.terminal.login.out (verify bytecode 7.5.6).
+    ThingHomeSdk.getUserInstance().logoutMultiTerminal(
+      terminalId, logoutCode,
+      object : IBooleanCallback {
+        override fun onSuccess() = promise.resolve(null)
+        override fun onError(code: String?, error: String?) =
+          TuyaReject.reject(promise, code ?: "terminate_session_error", error)
+      },
+    )
+  }
 
   // ---------- RN event emitter plumbing (no-op; bắt buộc cho NativeEventEmitter) ----------
   override fun addListener(eventName: String) {}
@@ -335,8 +400,8 @@ class TuyaAuthModule(reactContext: ReactApplicationContext) :
     m.putString("mobile", user?.mobile ?: "")
     m.putDouble("tempUnit", (user?.tempUnit ?: 0).toDouble())
     m.putString("timezoneId", user?.timezoneId ?: "")
-    m.putString("countryCode", "") // Android User bean không expose countryCode trực tiếp (iOS có)
-    m.putString("regionCode", "") // Android User bean không có regionCode (nằm trong Domain) - verify
+    m.putString("countryCode", user?.phoneCode ?: "") // User.getPhoneCode() = mã vùng lúc đăng ký (iOS countryCode)
+    m.putString("regionCode", user?.domain?.regionCode ?: "") // nằm trong User.getDomain()
     return m
   }
 }
