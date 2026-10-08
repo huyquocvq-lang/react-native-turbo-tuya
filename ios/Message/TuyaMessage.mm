@@ -1,23 +1,36 @@
 #import "TuyaMessage.h"
+#import "TuyaReject.h"
 #import <ThingSmartHomeKit/ThingSmartKit.h>
 #import <ThingSmartBaseKit/ThingSmartSDK+PushNotification.h>
 #import <ThingSmartMessageKit/ThingSmartMessage.h>
 #import <ThingSmartMessageKit/ThingSmartMessage+ThingDeprecatedApi.h>
 #import <ThingSmartMessageKit/ThingSmartMessageSetting.h>
 
-// WIRED (iOS): message list/read/delete + push status (total + by-type, [ThingSmartSDK sharedInstance])
-// + DND on/off (ThingSmartMessageSetting).
-// ⚠️ Verify: get*PushStatusWithSuccess block type (ThingSuccessBOOL); typo cố hữu 'Stauts'; ThingSmartMessageSetting init
-//    + selector getDeviceDNDSettingstatusSuccess: / setDeviceDNDSettingStatus:.
-// Còn TODO (iOS): DND list/add/modify/remove (request model). Wire trên Xcode:
-//   message badge: getLatestMessageWithSuccess:
-//   push:    [ThingSmartSDK sharedInstance] deviceToken + get/setPushStatusWithStatus + get/setDevice|Family|Notice|MarketingPushStatusWithStauts (TYPO 'Stauts')
-//   DND:     ThingSmartMessageSetting add/modify/remove...DNDRequestModel + getAllDNDListWithSuccess
-// Verbatim: docs/research/tuya-home-sdk-message-management.md. Android wired phần push-total/DND-write/registerDevice/deleteMessages.
-static void TuyaTODO(NSString *what, RCTPromiseRejectBlock reject) {
-  reject(@"ios_todo",
-         [NSString stringWithFormat:@"iOS '%@' chưa wire - xem docs/research/tuya-home-sdk-message-management.md.", what],
-         nil);
+// WIRED (iOS) toàn bộ spec - verify trên Pods thật (header + disassemble ThingSmartMessageKit/BaseKit):
+//   message list/detail/read/delete (ThingSmartMessage) + has-new (getLatestMessageWithSuccess: = thing.m.msg.new v1.0,
+//   cùng API Android requestMessageNew) + push status (total + by-type, [ThingSmartSDK sharedInstance]; typo 'Stauts')
+//   + DND (ThingSmartMessageSetting).
+// DND - cùng API cloud với Android 7.5.6:
+//   recurring = thing.m.device.alarm.nodisturb.{list,add,update,remove} v1.0 · startTime/endTime 'HH:mm', loops 7 ký tự.
+//   once      = m.message.device.alarm.nodisturb.{list,add,update} v3.0 · 'YYYY-MM-DD HH:mm', loops cố định "0000000".
+//   devIds gửi lên = chuỗi JSON {"devIds":[..],"allDevIds":bool}; list trả dict thô, devIds = chuỗi JSON array.
+//   addDnd/addOnceDnd: SDK nuốt timerId → gọi cùng API qua ThingSmartRequest (xem TuyaDndAdd).
+
+static NSString *const kTuyaOnceLoops = @"0000000";
+
+// Reject mang mã lỗi Tuya THẬT (shape { code, message, domain } - TuyaReject.h): mã cloud nằm ở
+// userInfo[NSLocalizedFailureReasonErrorKey] (ThingSmartRequest.h; = errorCode bên Android), không có thì NSError.code.
+static void TuyaRejectError(RCTPromiseRejectBlock reject, NSError *error, NSString *fallbackCode) {
+  id reason = error.userInfo[NSLocalizedFailureReasonErrorKey];
+  NSString *code = fallbackCode;
+  if ([reason isKindOfClass:[NSString class]] && [(NSString *)reason length] > 0) {
+    code = (NSString *)reason;
+  } else if ([reason isKindOfClass:[NSNumber class]]) {
+    code = [(NSNumber *)reason stringValue];
+  } else if (error) {
+    code = [@(error.code) stringValue];
+  }
+  TuyaRejectWithDomain(reject, code, error.localizedDescription ?: @"Tuya SDK returned no error details.", @"sdk");
 }
 
 static ThingMessageType TuyaMsgTypeFromString(NSString *type) {
@@ -41,6 +54,21 @@ static NSArray<NSString *> *TuyaStringArray(NSArray *values) {
     }
   }
   return out;
+}
+
+// Đọc an toàn từ dict JSON thô (NSNull / kiểu lạ → giá trị rỗng, không crash).
+static NSString *TuyaStr(id v) {
+  if ([v isKindOfClass:[NSString class]]) return (NSString *)v;
+  if ([v isKindOfClass:[NSNumber class]]) return [(NSNumber *)v stringValue];
+  return @"";
+}
+
+static long long TuyaLongLong(id v) {
+  return ([v isKindOfClass:[NSNumber class]] || [v isKindOfClass:[NSString class]]) ? [v longLongValue] : 0;
+}
+
+static BOOL TuyaBool(id v) {
+  return ([v isKindOfClass:[NSNumber class]] || [v isKindOfClass:[NSString class]]) ? [v boolValue] : NO;
 }
 
 static NSData *TuyaDataFromHex(NSString *hex) {
@@ -93,8 +121,118 @@ static NSDictionary *TuyaMessagePage(NSArray<ThingSmartMessageListModel *> *list
   };
 }
 
+// ---------- DND helpers ----------
+static BOOL TuyaDndIsOnce(NSString *loops) {
+  return loops.length == 0 || [loops isEqualToString:kTuyaOnceLoops];
+}
+
+// devIds đúng format SDK gửi (disassemble ThingSmartMessageSetting): {"devIds":[..],"allDevIds":bool}.
+// omitEmptyIds: addOnceDNDWithRequestModel: bỏ key devIds khi rỗng.
+static NSString *TuyaDndDevIdsJSON(BOOL allDevices, NSArray<NSString *> *devIds, BOOL omitEmptyIds) {
+  NSMutableDictionary *payload = [NSMutableDictionary dictionaryWithObject:@(allDevices) forKey:@"allDevIds"];
+  if (!(omitEmptyIds && devIds.count == 0)) payload[@"devIds"] = devIds ?: @[];
+  NSData *data = [NSJSONSerialization dataWithJSONObject:payload options:0 error:nil];
+  return data ? [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] : @"{}";
+}
+
+// devIds trong list = chuỗi JSON array (ThingSmartMessageDNDTimerModel parse bằng NSJSONSerialization);
+// phòng hờ mảng / object {"devIds":[..]} / chuỗi phân cách dấu phẩy.
+static NSArray<NSString *> *TuyaDndDevIds(id raw) {
+  if ([raw isKindOfClass:[NSArray class]]) return TuyaStringArray(raw);
+  if ([raw isKindOfClass:[NSDictionary class]]) {
+    id inner = ((NSDictionary *)raw)[@"devIds"];
+    return [inner isKindOfClass:[NSArray class]] ? TuyaStringArray(inner) : @[];
+  }
+  if (![raw isKindOfClass:[NSString class]]) return @[];
+  NSString *s = [(NSString *)raw stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+  if (s.length == 0) return @[];
+  if ([s hasPrefix:@"["] || [s hasPrefix:@"{"]) {
+    id json = [NSJSONSerialization JSONObjectWithData:[s dataUsingEncoding:NSUTF8StringEncoding] options:0 error:nil];
+    if ([json isKindOfClass:[NSArray class]] || [json isKindOfClass:[NSDictionary class]]) return TuyaDndDevIds(json);
+  }
+  NSCharacterSet *trim = [NSCharacterSet characterSetWithCharactersInString:@" \"\n\t"];
+  NSMutableArray<NSString *> *out = [NSMutableArray array];
+  for (NSString *part in [s componentsSeparatedByString:@","]) {
+    NSString *t = [part stringByTrimmingCharactersInSet:trim];
+    if (t.length > 0) [out addObject:t];
+  }
+  return out;
+}
+
+// Dict thô (getDNDListSuccess:/getAllDNDList onceDNDList) hoặc ThingSmartMessageDNDTimerModel → TuyaDndPeriod.
+// Dùng dict thô thay vì *ModelList: model parse devIds bằng NSJSONSerialization (devIds nil → exception).
+static NSDictionary *TuyaDndPeriod(id item) {
+  long long timerId = 0;
+  NSString *start = @"", *end = @"", *loops = @"";
+  BOOL all = NO;
+  NSArray<NSString *> *ids = @[];
+  if ([item isKindOfClass:[ThingSmartMessageDNDTimerModel class]]) {
+    ThingSmartMessageDNDTimerModel *m = (ThingSmartMessageDNDTimerModel *)item;
+    timerId = m.timerId;
+    start = TuyaStr(m.startTime);
+    end = TuyaStr(m.endTime);
+    loops = TuyaStr(m.loops);
+    all = m.allDevIds;
+    ids = TuyaDndDevIds(m.devIds);
+  } else if ([item isKindOfClass:[NSDictionary class]]) {
+    NSDictionary *d = (NSDictionary *)item;
+    timerId = TuyaLongLong(d[@"id"]);
+    start = TuyaStr(d[@"startTime"]);
+    end = TuyaStr(d[@"endTime"]);
+    loops = TuyaStr(d[@"loops"]);
+    all = TuyaBool(d[@"allDevIds"]);
+    ids = TuyaDndDevIds(d[@"devIds"]);
+  } else {
+    return nil;
+  }
+  return @{
+    @"id": @(timerId),
+    @"startTime": start,
+    @"endTime": end,
+    @"loops": TuyaDndIsOnce(loops) ? @"" : loops,
+    @"allDevices": @(all),
+    @"devIds": ids,
+  };
+}
+
+// once=NO: bỏ entry loops "0000000" (phòng hờ list v1 lẫn once); once=YES: onceDNDList SDK đã tách sẵn.
+static NSArray *TuyaDndPeriods(id list, BOOL once) {
+  NSMutableArray *out = [NSMutableArray array];
+  for (id item in ([list isKindOfClass:[NSArray class]] ? (NSArray *)list : @[])) {
+    NSDictionary *p = TuyaDndPeriod(item);
+    if (p && ([(NSString *)p[@"loops"] length] == 0) == once) [out addObject:p];
+  }
+  return out;
+}
+
+static long long TuyaDndTimerId(id result) {
+  if ([result isKindOfClass:[NSDictionary class]]) {
+    NSDictionary *d = (NSDictionary *)result;
+    return TuyaLongLong(d[@"id"] ?: d[@"timerId"]);
+  }
+  return TuyaLongLong(result);
+}
+
+// SDK iOS addDNDWithDNDRequestModel:/addOnceDNDWithRequestModel: nhận timerId từ server nhưng success là
+// ThingSuccessHandler (bỏ mất id). Gửi CHÍNH request đó (api/version/postData lấy từ disassemble ThingSmartMessageKit;
+// Android addDNDWithStartTime/addOnceDNDWithStartTime gọi cùng API và trả Long) qua ThingSmartRequest public để có timerId.
+static void TuyaDndAdd(ThingSmartRequest *request,
+                       NSString *api,
+                       NSString *version,
+                       NSDictionary *postData,
+                       RCTPromiseResolveBlock resolve,
+                       RCTPromiseRejectBlock reject) {
+  [request requestWithApiName:api
+                     postData:postData
+                      version:version
+                      success:^(id result) { resolve(@(TuyaDndTimerId(result))); }
+                      failure:^(NSError *e) { TuyaRejectError(reject, e, @"add_dnd_error"); }];
+}
+
 @interface TuyaMessage ()
 @property (nonatomic, strong) ThingSmartMessage *message;
+@property (nonatomic, strong) ThingSmartMessageSetting *dndSetting;
+@property (nonatomic, strong) ThingSmartRequest *dndRequest;
 @end
 
 @implementation TuyaMessage
@@ -104,6 +242,16 @@ RCT_EXPORT_MODULE()
 - (ThingSmartMessage *)message {
   if (!_message) { _message = [[ThingSmartMessage alloc] init]; }
   return _message;
+}
+
+- (ThingSmartMessageSetting *)dndSetting {
+  if (!_dndSetting) { _dndSetting = [[ThingSmartMessageSetting alloc] init]; }
+  return _dndSetting;
+}
+
+- (ThingSmartRequest *)dndRequest {
+  if (!_dndRequest) { _dndRequest = [[ThingSmartRequest alloc] init]; }
+  return _dndRequest;
 }
 
 // ---------- Push token ----------
@@ -189,8 +337,19 @@ RCT_EXPORT_MODULE()
 }
 
 // ---------- Has-new / read / delete ----------
+// getLatestMessageWithSuccess: = thing.m.msg.new v1.0 (disassemble ThingMessageService), trả dict thô
+// {alarm, family, notification} - cùng API/payload Android requestMessageNew (MessageHasNew).
 - (void)getMessageHasNew:(RCTPromiseResolveBlock)resolve
-                  reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"getMessageHasNew", reject); }
+                  reject:(RCTPromiseRejectBlock)reject {
+  [self.message getLatestMessageWithSuccess:^(NSDictionary *dict) {
+    NSDictionary *d = [dict isKindOfClass:[NSDictionary class]] ? dict : @{};
+    resolve(@{
+      @"alarm": @(TuyaBool(d[@"alarm"])),
+      @"family": @(TuyaBool(d[@"family"])),
+      @"notification": @(TuyaBool(d[@"notification"])),
+    });
+  } failure:^(NSError *e) { TuyaRejectError(reject, e, @"get_message_has_new_error"); }];
+}
 
 - (void)markMessagesRead:(NSString *)type
                      ids:(NSArray *)ids
@@ -221,17 +380,20 @@ RCT_EXPORT_MODULE()
 #pragma clang diagnostic pop
 }
 
+// Docs Tuya: srcIds = xoá cả nhóm alarm theo thiết bị, ids = xoá từng tin chi tiết → chỉ no-op khi CẢ HAI rỗng
+// (SDK gửi ids/msgSrcIds dạng chuỗi nối dấu phẩy, mảng rỗng → "").
 - (void)deleteMessagesByType:(NSString *)type
                          ids:(NSArray *)ids
                       srcIds:(NSArray *)srcIds
                      resolve:(RCTPromiseResolveBlock)resolve
                       reject:(RCTPromiseRejectBlock)reject {
   NSArray<NSString *> *msgIds = TuyaStringArray(ids);
-  if (msgIds.count == 0) { resolve(@YES); return; }
+  NSArray<NSString *> *msgSrcIds = TuyaStringArray(srcIds);
+  if (msgIds.count == 0 && msgSrcIds.count == 0) { resolve(@YES); return; }
   ThingSmartMessageListDeleteRequestModel *req = [[ThingSmartMessageListDeleteRequestModel alloc] init];
   req.msgType = TuyaMsgTypeFromString(type);
   req.msgIds = msgIds;
-  req.msgSrcIds = TuyaStringArray(srcIds);
+  req.msgSrcIds = msgSrcIds;
   [self.message deleteMessageWithDeleteRequestModel:req
                                             success:^(BOOL result) { resolve(@(result)); }
                                             failure:^(NSError *e) { reject(@"delete_messages_error", e.localizedDescription, e); }];
@@ -252,6 +414,7 @@ RCT_EXPORT_MODULE()
                                                   failure:^(NSError *e) { reject(@"push_status_error", e.localizedDescription, e); }];
 }
 
+// thing.m.msg.notice.switch.status / .setting: type 0 device(alarm) · 1 family · 2 notice · 4 marketing.
 - (void)getPushStatusByType:(NSString *)pushType
                     resolve:(RCTPromiseResolveBlock)resolve
                      reject:(RCTPromiseRejectBlock)reject {
@@ -283,25 +446,32 @@ RCT_EXPORT_MODULE()
 // ---------- Do-Not-Disturb ----------
 - (void)getDndStatus:(RCTPromiseResolveBlock)resolve
               reject:(RCTPromiseRejectBlock)reject {
-  ThingSmartMessageSetting *s = [[ThingSmartMessageSetting alloc] init];
-  [s getDeviceDNDSettingstatusSuccess:^(BOOL b) { resolve(@(b)); }
-                              failure:^(NSError *e) { reject(@"dnd_status_error", e.localizedDescription, e); }];
+  [self.dndSetting getDeviceDNDSettingstatusSuccess:^(BOOL b) { resolve(@(b)); }
+                                            failure:^(NSError *e) { reject(@"dnd_status_error", e.localizedDescription, e); }];
 }
 
 - (void)setDndStatus:(BOOL)open
              resolve:(RCTPromiseResolveBlock)resolve
               reject:(RCTPromiseRejectBlock)reject {
-  ThingSmartMessageSetting *s = [[ThingSmartMessageSetting alloc] init];
-  [s setDeviceDNDSettingStatus:open
-                       success:^{ resolve(@(open)); }
-                       failure:^(NSError *e) { reject(@"dnd_status_error", e.localizedDescription, e); }];
+  [self.dndSetting setDeviceDNDSettingStatus:open
+                                     success:^{ resolve(@(open)); }
+                                     failure:^(NSError *e) { reject(@"dnd_status_error", e.localizedDescription, e); }];
 }
 
+// thing.m.device.alarm.nodisturb.list v1.0 (= Android getDNDList) → mảng dict thô.
 - (void)getDndList:(RCTPromiseResolveBlock)resolve
-            reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"getDndList", reject); }
+            reject:(RCTPromiseRejectBlock)reject {
+  [self.dndSetting getDNDListSuccess:^(NSArray *list) { resolve(TuyaDndPeriods(list, NO)); }
+                             failure:^(NSError *e) { TuyaRejectError(reject, e, @"get_dnd_list_error"); }];
+}
 
+// m.message.device.alarm.nodisturb.list v3.0; SDK tách onceDNDList theo loops "0000000" (= Android getOnceDNDList).
 - (void)getOnceDndList:(RCTPromiseResolveBlock)resolve
-                reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"getOnceDndList", reject); }
+                reject:(RCTPromiseRejectBlock)reject {
+  [self.dndSetting getAllDNDListWithSuccess:^(ThingSmartMessageDNDListEntity *result) {
+    resolve(TuyaDndPeriods(result.onceDNDList, YES));
+  } failure:^(NSError *e) { TuyaRejectError(reject, e, @"get_dnd_list_error"); }];
+}
 
 - (void)addDnd:(NSString *)startTime
        endTime:(NSString *)endTime
@@ -309,15 +479,44 @@ RCT_EXPORT_MODULE()
     allDevices:(BOOL)allDevices
         devIds:(NSArray *)devIds
        resolve:(RCTPromiseResolveBlock)resolve
-        reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"addDnd", reject); }
+        reject:(RCTPromiseRejectBlock)reject {
+  // loops rỗng/"0000000" = DND một lần → entry lạc sang getOnceDndList. Chặn sớm như Android.
+  if (TuyaDndIsOnce(loops)) {
+    TuyaRejectWithDomain(reject, @"invalid_param",
+        @"addDnd needs a weekly loops pattern (7 chars, at least one day set); use addOnceDnd for a one-time period.",
+        @"sdk");
+    return;
+  }
+  // = addDNDWithDNDRequestModel: (postData y hệt SDK).
+  NSDictionary *postData = @{
+    @"startTime": startTime ?: @"",
+    @"endTime": endTime ?: @"",
+    @"devIds": TuyaDndDevIdsJSON(allDevices, TuyaStringArray(devIds), NO),
+    @"loops": loops,
+  };
+  TuyaDndAdd(self.dndRequest, @"thing.m.device.alarm.nodisturb.add", @"1.0", postData, resolve, reject);
+}
 
 - (void)addOnceDnd:(NSString *)startTime
            endTime:(NSString *)endTime
         allDevices:(BOOL)allDevices
             devIds:(NSArray *)devIds
            resolve:(RCTPromiseResolveBlock)resolve
-            reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"addOnceDnd", reject); }
+            reject:(RCTPromiseRejectBlock)reject {
+  // = addOnceDNDWithRequestModel: (postData y hệt SDK: loops "0000000", noDisturbType 1, dpIds/dpValues "[]").
+  NSDictionary *postData = @{
+    @"startTime": startTime ?: @"",
+    @"endTime": endTime ?: @"",
+    @"loops": kTuyaOnceLoops,
+    @"noDisturbType": @1,
+    @"dpIds": @"[]",
+    @"dpValues": @"[]",
+    @"devIds": TuyaDndDevIdsJSON(allDevices, TuyaStringArray(devIds), YES),
+  };
+  TuyaDndAdd(self.dndRequest, @"m.message.device.alarm.nodisturb.add", @"3.0", postData, resolve, reject);
+}
 
+// loops '' | "0000000" → modifyOnceDNDWithTimerID (v3); còn lại → modifyDNDWithTimerID (v1). Giống Android.
 - (void)modifyDnd:(double)dndId
         startTime:(NSString *)startTime
           endTime:(NSString *)endTime
@@ -325,11 +524,40 @@ RCT_EXPORT_MODULE()
        allDevices:(BOOL)allDevices
            devIds:(NSArray *)devIds
           resolve:(RCTPromiseResolveBlock)resolve
-           reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"modifyDnd", reject); }
+           reject:(RCTPromiseRejectBlock)reject {
+  NSArray<NSString *> *ids = TuyaStringArray(devIds); // SDK dựng dict có devIDs → không được nil
+  void (^ok)(void) = ^{ resolve(@YES); };
+  void (^fail)(NSError *) = ^(NSError *e) { TuyaRejectError(reject, e, @"modify_dnd_error"); };
+  if (TuyaDndIsOnce(loops)) {
+    ThingSmartMessageOnceDNDRequestModel *req = [[ThingSmartMessageOnceDNDRequestModel alloc] init];
+    req.startTime = startTime ?: @"";
+    req.endTime = endTime ?: @"";
+    req.devIDs = ids;
+    req.isAllDevIDs = allDevices;
+    [self.dndSetting modifyOnceDNDWithTimerID:(long)dndId requestModel:req success:ok failure:fail];
+    return;
+  }
+  ThingSmartMessageSettingDNDRequestModel *req = [[ThingSmartMessageSettingDNDRequestModel alloc] init];
+  req.startTime = startTime ?: @"";
+  req.endTime = endTime ?: @"";
+  req.devIDs = ids;
+  req.isAllDevIDs = allDevices;
+  // loops (deprecated) giữ nguyên chuỗi như Android; setDNDDaysWithFlags: đi vòng qua bitmask.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+  req.loops = loops;
+#pragma clang diagnostic pop
+  [self.dndSetting modifyDNDWithTimerID:(long)dndId DNDRequestModel:req success:ok failure:fail];
+}
 
+// thing.m.device.alarm.nodisturb.remove - SDK chỉ có 1 API xoá, dùng cho cả recurring lẫn once.
 - (void)removeDnd:(double)dndId
           resolve:(RCTPromiseResolveBlock)resolve
-           reject:(RCTPromiseRejectBlock)reject { TuyaTODO(@"removeDnd", reject); }
+           reject:(RCTPromiseRejectBlock)reject {
+  [self.dndSetting removeDNDWithTimerID:(long)dndId
+                                success:^{ resolve(@YES); }
+                                failure:^(NSError *e) { TuyaRejectError(reject, e, @"remove_dnd_error"); }];
+}
 
 // ---------- TurboModule boilerplate ----------
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:
