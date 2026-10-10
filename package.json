@@ -1,6 +1,6 @@
 {
   "name": "@jimmy2k/react-native-turbo-tuya",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "React Native TurboModule wrapping Tuya Smart Life App SDK (Wi-Fi + BLE) for the ice-bath app",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
