@@ -2,12 +2,13 @@ import { Tuya } from '@jimmy2k/react-native-turbo-tuya';
 import { Section, Btn } from '../ui';
 import type { DemoCtx } from '../useDemo';
 
-// Scene + Timer/Message/Member + Matter/Mesh. Several are TODO/skeleton on Android → reject (by design).
+// Scene + Timer/Message/Member + Matter/Mesh. The few methods a platform's SDK lacks reject with
+// not_implemented / ios_todo (see the README status table).
 export function AdvancedSection({ d }: { d: DemoCtx }) {
   return (
     <Section
       title="6 · Scene · Timer · Message · Member · Matter · Mesh"
-      subtitle="P2/P3 - some methods reject with not_implemented (intended-call documented in source)"
+      subtitle="Matter on iOS needs the Matter pods; unsupported methods reject with not_implemented / ios_todo"
     >
       <Btn
         title="Scene list"
